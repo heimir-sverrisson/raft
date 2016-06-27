@@ -16,11 +16,11 @@ class UDPSocket {
   public:
     enum SocketType { server, client };
     UDPSocket(string server_name, string service, SocketType s_type);
-    int receive(string& message, int max_size);
+    int receive(string& message, int max_size, int timeout = -1);
     void send(string message);
   private:
     SocketType my_type;
-    int socket_info;
+    int socket_fd;
     struct addrinfo *results;
     void bind();
     void connect();

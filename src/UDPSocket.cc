@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <errno.h>
+#include <poll.h>
 
 UDPSocket::UDPSocket(string server_name, string service, SocketType s_type){
   struct addrinfo hints;
@@ -30,12 +31,12 @@ void
 UDPSocket::bind(){
   struct addrinfo *rp;
   for(rp = results; rp != NULL; rp = rp->ai_next){
-    socket_info = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-    if(socket_info == -1)
+    socket_fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if(socket_fd == -1)
       continue;
-    if(::bind(socket_info, rp->ai_addr, rp->ai_addrlen) == 0)
+    if(::bind(socket_fd, rp->ai_addr, rp->ai_addrlen) == 0)
       break;
-    close(socket_info);
+    close(socket_fd);
   }
   freeaddrinfo(results);
 }
@@ -44,20 +45,29 @@ void
 UDPSocket::connect(){
   struct addrinfo *rp;
   for(rp = results; rp != NULL; rp = rp->ai_next){
-    socket_info = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-    if(socket_info == -1)
+    socket_fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if(socket_fd == -1)
       continue;
-    if(::connect(socket_info, rp->ai_addr, rp->ai_addrlen) == 0)
+    if(::connect(socket_fd, rp->ai_addr, rp->ai_addrlen) == 0)
       break;
   }
   freeaddrinfo(results);
 }
 
 int
-UDPSocket::receive(string& message, int max_size){
+UDPSocket::receive(string& message, int max_size, int timeout){
   int msg_length;
   char *msg = new char[max_size];
-  msg_length = recv(socket_info, msg, max_size, 0);
+  struct pollfd pdfs[1];
+
+  if(timeout >= 0) { // Default is -1
+    pdfs[0].fd = socket_fd;
+    pdfs[0].events = POLLIN;
+    poll(pdfs, 1, timeout);
+    if((pdfs[0].revents & POLLIN) == 0)
+      return -1;
+  }
+  msg_length = recv(socket_fd, msg, max_size, 0);
   if(msg_length < 0){
     throw strerror(errno);
   }
@@ -68,7 +78,7 @@ UDPSocket::receive(string& message, int max_size){
 
 void
 UDPSocket::send(string message){
-  if(::send(socket_info, message.c_str(), message.length(), 0) < 0){
+  if(::send(socket_fd, message.c_str(), message.length(), 0) < 0){
     throw strerror(errno);
   }
 }

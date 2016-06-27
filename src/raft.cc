@@ -12,7 +12,9 @@ void receive_msg(void){
   UDPSocket s = UDPSocket("localhost", "2001", 
                         UDPSocket::SocketType::server);
   while(!done){
-    s.receive(str, 100);
+    int ret = s.receive(str, 100, 1002);
+    if(ret < 0)
+      return;
     cout << str << endl;
   }
 }
