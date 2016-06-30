@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-g -std=c++11 -pthread -Wall -pedantic -I.
+CXXFLAGS=-g -std=c++11 -pthread -Wall -pedantic -I/usr/local/include -I.
 BIN=../bin/raft
 LDLIBS=-pthread
 
