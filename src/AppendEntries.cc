@@ -2,6 +2,8 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
+using namespace rapidjson;
+
 AppendEntries::AppendEntries() {
   m_term = 0;
   m_leaderId = 0;
@@ -9,6 +11,18 @@ AppendEntries::AppendEntries() {
   m_prevLogTerm = 0;
   m_leaderCommit = 0;
 }
+
+/*
+AppendEntries::AppendEntries(const AppendEntries& cpy){
+  m_term = cpy.m_term;
+  m_leaderId = cpy.m_leaderId;
+  m_prevLogIndex = cpy.m_prevLogIndex;
+  m_prevLogTerm = cpy.preLogTerm;
+  m_leaderCommit = m_leaderCommit;
+  m_d = cpy.m_d;
+  m_o = cpy.m_o;
+}
+*/
 
 AppendEntries::AppendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, int leaderCommit) {
   m_term = term;
@@ -34,26 +48,26 @@ AppendEntries::addInt(Value& o, const char *key, int value){
   o.AddMember(k, v, m_d.GetAllocator());
 }
 
-const char *
-AppendEntries::to_string(){
+void
+AppendEntries::to_string(std::string& str){
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
   m_o.Accept(writer);
-  return buffer.GetString();
-}
-
-const char *
-AppendEntries::get_entries(){
-  StringBuffer buffer;
-  Writer<StringBuffer> writer(buffer);
-  m_o["entries"].Accept(writer);
-  return buffer.GetString();
+  str = buffer.GetString();
 }
 
 void
-AppendEntries::parse_json(const char* json){
+AppendEntries::get_entries(std::string& str){
+  StringBuffer buffer;
+  Writer<StringBuffer> writer(buffer);
+  m_o["entries"].Accept(writer);
+  str = buffer.GetString();
+}
+
+void
+AppendEntries::parse_json(std::string json){
   Document d;
-  ParseResult result = d.Parse(json);
+  ParseResult result = d.Parse(json.c_str());
   if(!result){
     return;
   }
@@ -71,3 +85,4 @@ void
 AppendEntries::addEntry(Value& v){
  m_o["entries"].PushBack(v, m_d.GetAllocator());
 }
+

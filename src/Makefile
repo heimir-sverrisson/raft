@@ -1,7 +1,8 @@
 CXX=g++
-CXXFLAGS=-g -std=c++11 -pthread -Wall -pedantic -I/usr/local/include -I.
+CXXFLAGS=-g -std=c++11 -pthread -Wall -pedantic -DBOOST_LOG_DYN_LINK \
+	 -I/usr/local/include -I.
 BIN=../bin/raft
-LDLIBS=-pthread
+LDLIBS=-lboost_log -lboost_log_setup -lboost_thread -lpthread
 
 SRC=$(wildcard *.cc)
 OBJ=$(SRC:%.cc=%.o)

@@ -58,6 +58,7 @@ int
 UDPSocket::receive(string& message, int max_size, int timeout){
   int msg_length;
   char *msg = new char[max_size];
+  memset(msg, 0, max_size);
   struct pollfd pdfs[1];
 
   if(timeout >= 0) { // Default is -1
