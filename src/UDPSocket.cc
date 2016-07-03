@@ -4,6 +4,7 @@
 #include <iostream>
 #include <errno.h>
 #include <poll.h>
+#include <boost/log/trivial.hpp>  
 
 UDPSocket::UDPSocket(string server_name, string service, SocketType s_type){
   struct addrinfo hints;
@@ -15,6 +16,7 @@ UDPSocket::UDPSocket(string server_name, string service, SocketType s_type){
   int rv = getaddrinfo(server_name.c_str(), service.c_str(), 
                                         &hints, &results);
   if(rv != 0){
+    BOOST_LOG_TRIVIAL(error) << "UDP get address info error: " << strerror(errno);
     throw strerror(errno);
   }
   switch(s_type){
@@ -70,6 +72,7 @@ UDPSocket::receive(string& message, int max_size, int timeout){
   }
   msg_length = recv(socket_fd, msg, max_size, 0);
   if(msg_length < 0){
+    BOOST_LOG_TRIVIAL(error) << "UDP recv error: " << strerror(errno);
     throw strerror(errno);
   }
   message = msg;
@@ -80,6 +83,7 @@ UDPSocket::receive(string& message, int max_size, int timeout){
 void
 UDPSocket::send(string message){
   if(::send(socket_fd, message.c_str(), message.length(), 0) < 0){
+    BOOST_LOG_TRIVIAL(error) << "UDP send error: " << strerror(errno);
     throw strerror(errno);
   }
 }

@@ -7,12 +7,12 @@
 class AppendEntries {
   public:
     AppendEntries();
-    // AppendEntries(const AppendEntries&);
+    AppendEntries(const AppendEntries&);
     AppendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, int leaderCommit);
     void addEntry(rapidjson::Value& v);
     void parse_json(std::string json);
-    void to_string(std::string& str);
-    void get_entries(std::string& str);
+    std::string to_string();
+    std::string get_entries();
     int get_term();
     int get_leaderId();
     int get_prevLogIndex();
@@ -22,6 +22,7 @@ class AppendEntries {
     void addInt(rapidjson::Value& o, const char *key, int value);
     rapidjson::Document m_d;
     rapidjson::Value m_o;
+    rapidjson::Document::AllocatorType& m_allocator;
     int m_term;
     int m_leaderId;
     int m_prevLogIndex;

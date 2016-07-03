@@ -33,7 +33,7 @@ void init()
       keywords::file_name = "raft_%N.log",
       keywords::rotation_size = 10 * 1024 * 1024,
       keywords::time_based_rotation = sinks::file::rotation_at_time_point(0, 0, 0),
-      keywords::format = "[%TimeStamp%]: %Severity% %ThreadID% %Message%"
+      keywords::format = "[%TimeStamp%]:\t%Severity%\t%ThreadID%\t%Message%"
     );
 
     logging::core::get()->set_filter
@@ -45,7 +45,7 @@ void init()
 void receive_msg(void){
   string str;
   AppendEntries ae;
-  BOOST_LOG_TRIVIAL(info) << "Starting receive_msg()";
+  BOOST_LOG_TRIVIAL(info) << "Starting thread receive_msg()";
   UDPSocket s = UDPSocket("localhost", "2001", 
                         UDPSocket::SocketType::server);
   while(!done){
@@ -59,24 +59,24 @@ void receive_msg(void){
       return;
     }
     ae.parse_json(str);
-    string the_json;
-    ae.to_string(the_json);
+    cout << str << endl;
+    string the_json = ae.to_string();
+    cout << the_json << endl;
+    the_json = ae.get_entries();
     cout << the_json << endl;
   }
 }
 
-void send_msg(AppendEntries *ae){
-  BOOST_LOG_TRIVIAL(info) << "Starting send_msg()";
+void send_msg(vector<AppendEntries> aes){
+  BOOST_LOG_TRIVIAL(info) << "Starting thread send_msg()";
   try{
     UDPSocket sock = UDPSocket("localhost", "2001", 
                           UDPSocket::SocketType::client);
-    // for(std::vector<T>::iterator it = v.begin(); it != v.end(); ++it)
-    // for(vector<AppendEntries>::iterator it = aes.begin(); it != aes.end(); ++it){
-      string s;
-      ae->to_string(s);
+    for(auto& ae : aes){
+      string s = ae.to_string();
       sock.send(s);
       this_thread::sleep_for(chrono::milliseconds(1000));
-    // }
+    }
     done = true;
     sock.send("");
   } catch(const char *msg) {
@@ -84,22 +84,28 @@ void send_msg(AppendEntries *ae){
   }
 }
 
+AppendEntries make_entry(int i){
+  AppendEntries ae(i + 1, i + 2, i + 3, i + 4, i + 5);
+  using namespace rapidjson;
+  for(int j=0; j < 10; j++){
+    Value v(10 - j + i);
+    ae.addEntry(v);
+  }
+  return ae;
+}
+
 int main(int argc, char *arg[]) {
   init();
   logging::add_common_attributes();
 
   BOOST_LOG_TRIVIAL(info) << "Starting main()";
-  AppendEntries ae(1, 2, 3, 4, 5);
-  using namespace rapidjson;
-  for(int i=0; i < 10; i++){
-    Value v(10 - i);
-    ae.addEntry(v);
-  }
-  // vector<AppendEntries> aes;
-  // aes.push_back(ae);
+  vector<AppendEntries> aes;
+  aes.push_back(make_entry(0));
+  aes.push_back(make_entry(2));
+  aes.push_back(make_entry(4));
 
   thread rcv(&receive_msg);
-  thread snd(&send_msg, &ae);
+  thread snd(&send_msg, aes);
   snd.join();
   rcv.join();
 }
