@@ -9,7 +9,7 @@ LDLIBS = -lboost_unit_test_framework -lboost_log -lboost_log_setup \
 
 SRC = UnitAppendEntries.cc 
 OBJ=$(SRC:%.cc=%.o)
-SOBJ=../src/AppendEntries.o
+SOBJ=../src/AppendEntries.o ../src/raft_util.o
 
 all: $(BIN)
 
