@@ -17,6 +17,14 @@ AppendEntries::AppendEntries()
   m_prevLogIndex = 0;
   m_prevLogTerm = 0;
   m_leaderCommit = 0;
+  m_o = Value(kObjectType);
+
+  addInt(m_o, "term", m_term);
+  addInt(m_o, "leaderId", m_leaderId);
+  addInt(m_o, "prevLogIndex", m_prevLogIndex);
+  addInt(m_o, "prevLogTerm", m_prevLogTerm);
+  addInt(m_o, "leaderCommit", m_leaderCommit);
+  m_o.AddMember("entries", Value(kArrayType), m_allocator);
   BOOST_LOG_TRIVIAL(info) << "AppendEntries created no params";
 }
 
@@ -27,7 +35,7 @@ AppendEntries::AppendEntries(const AppendEntries& cpy)
   m_leaderId = cpy.m_leaderId;
   m_prevLogIndex = cpy.m_prevLogIndex;
   m_prevLogTerm = cpy.m_prevLogTerm;
-  m_leaderCommit = m_leaderCommit;
+  m_leaderCommit = cpy.m_leaderCommit;
   m_d.CopyFrom(cpy.m_d, m_allocator);
   m_o.CopyFrom(cpy.m_o, m_allocator);
 }
@@ -47,8 +55,7 @@ AppendEntries::AppendEntries(int term, int leaderId, int prevLogIndex, int prevL
   addInt(m_o, "prevLogIndex", prevLogIndex);
   addInt(m_o, "prevLogTerm", prevLogTerm);
   addInt(m_o, "leaderCommit", leaderCommit);
-  Value k("entries", m_allocator);
-  m_o.AddMember(k, Value(kArrayType), m_allocator);
+  m_o.AddMember("entries", Value(kArrayType), m_allocator);
   BOOST_LOG_TRIVIAL(info) << "AppendEntries created w/ params";
 }
 

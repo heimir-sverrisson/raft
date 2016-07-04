@@ -67,8 +67,10 @@ UDPSocket::receive(string& message, int max_size, int timeout){
     pdfs[0].fd = socket_fd;
     pdfs[0].events = POLLIN;
     poll(pdfs, 1, timeout);
-    if((pdfs[0].revents & POLLIN) == 0)
+    if((pdfs[0].revents & POLLIN) == 0){
+      delete[] msg;
       return -1;
+    }
   }
   msg_length = recv(socket_fd, msg, max_size, 0);
   if(msg_length < 0){

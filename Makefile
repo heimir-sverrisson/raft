@@ -4,6 +4,7 @@ all:
 	$(MAKE) -C src
 
 test:
+	$(MAKE) -C src
 	$(MAKE) -C test
 
 lint:
@@ -12,3 +13,5 @@ lint:
 clean:
 	rm -f *.log
 	$(MAKE) -C src clean
+	$(MAKE) -C test clean
+
