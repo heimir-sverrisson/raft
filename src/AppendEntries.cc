@@ -118,4 +118,3 @@ void
 AppendEntries::addEntry(Value& v){
  m_o["entries"].PushBack(v, m_allocator);
 }
-
