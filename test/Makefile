@@ -5,7 +5,7 @@ CXXFLAGS=-g -std=c++11 -pthread -Wall -pedantic -DBOOST_LOG_DYN_LINK \
 	 -I/usr/local/include -I../include
 BIN := UnitAppendEntries UnitUDPSocket
 LDLIBS = -lboost_unit_test_framework -lboost_log -lboost_log_setup \
-       -lboost_thread -lpthread
+       -lboost_thread -lboost_system -lpthread
 
 SRC = UnitAppendEntries.cc 
 OBJ=$(SRC:%.cc=%.o)
