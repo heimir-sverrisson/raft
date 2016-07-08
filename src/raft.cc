@@ -6,6 +6,7 @@
 #include <AppendEntries.h>
 #include <raft_util.h>
 #include <boost/log/trivial.hpp>
+#include <KeyValueStore.h>
 
 
 bool done = false;
@@ -76,4 +77,9 @@ int main(int argc, char *arg[]) {
   thread snd(&send_msg, aes);
   snd.join();
   rcv.join();
+  KeyValueStore s;
+  s.setValue("key something","value something");
+  s.setValue("key else","value else");
+  s.dump();
+  cout << s.getValue("nonexistant key").length() << endl;
 }
