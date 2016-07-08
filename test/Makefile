@@ -3,7 +3,7 @@
 CXX=g++
 CXXFLAGS=-g -std=c++11 -pthread -Wall -pedantic -DBOOST_LOG_DYN_LINK \
 	 -I/usr/local/include -I../include
-BIN := UnitAppendEntries UnitUDPSocket UnitKeyValueStore
+BIN := UnitAppendEntries UnitUDPSocket UnitKeyValueStore UnitIdStore
 LDLIBS = -lboost_unit_test_framework -lboost_log -lboost_log_setup \
        -lboost_thread -lboost_system -lpthread
 
@@ -16,6 +16,7 @@ all: $(BIN)
 UnitAppendEntries: UnitAppendEntries.o ../src/AppendEntries.o 
 UnitUDPSocket: UnitUDPSocket.o ../src/UDPSocket.o 
 UnitKeyValueStore: UnitKeyValueStore.o ../src/KeyValueStore.o 
+UnitIdStore: UnitIdStore.o ../src/IdStore.o 
 
 $(BIN):
 	$(CXX) $(SOBJ) $^ $(LDLIBS) -o $@

@@ -7,6 +7,7 @@
 #include <raft_util.h>
 #include <boost/log/trivial.hpp>
 #include <KeyValueStore.h>
+#include <IdStore.h>
 
 
 bool done = false;
@@ -82,4 +83,15 @@ int main(int argc, char *arg[]) {
   s.setValue("key else","value else");
   s.dump();
   cout << s.getValue("nonexistant key").length() << endl;
+  IdStore istore;
+  istore.createId("customers");
+  uint64_t id = istore.getValue("customers", 1500);
+  cout << "my range: " << id << endl;
+  id = istore.getValue("customers", 1500);
+  cout << "my new range: " << id << endl;
+  try {
+    cout << istore.getValue("nonexistent key", 100) << endl;
+  } catch(string str) {
+    cerr << "Exception: " << str << endl;
+  }
 }
