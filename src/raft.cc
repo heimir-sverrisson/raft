@@ -8,48 +8,20 @@
 #include <boost/log/trivial.hpp>
 #include <KeyValueStore.h>
 #include <IdStore.h>
+#include <Receiver.h>
+#include <Config.h>
 
-
-bool done = false;
-
-
-void receive_msg(void){
-  string str;
-  AppendEntries ae;
-  BOOST_LOG_TRIVIAL(info) << "Starting thread receive_msg()";
-  UDPSocket s = UDPSocket("localhost", "2001", 
-                        UDPSocket::SocketType::server);
-  while(!done){
-    int ret = s.receive(str, 1000, 1100);
-    if(ret < 0){
-      BOOST_LOG_TRIVIAL(info) << "Timeout!";
-      return;
-    }
-    if(str.length() == 0){
-      BOOST_LOG_TRIVIAL(info) << "Done!";
-      return;
-    }
-    ae.parse_json(str);
-    cout << str << endl;
-    string the_json = ae.to_string();
-    cout << the_json << endl;
-    the_json = ae.get_entries();
-    cout << the_json << endl;
-  }
-}
 
 void send_msg(vector<AppendEntries> aes){
   BOOST_LOG_TRIVIAL(info) << "Starting thread send_msg()";
+  char sep = Config::messageSeparator;
   try{
-    UDPSocket sock = UDPSocket("localhost", "2001", 
-                          UDPSocket::SocketType::client);
+    UDPSocket sock = UDPSocket("localhost", "2001", SocketType::clientSocket);
     for(auto& ae : aes){
-      string s = ae.to_string();
+      string s = to_string(MessageType::appendEntries) + sep + ae.to_string();
       sock.send(s);
       this_thread::sleep_for(chrono::milliseconds(1000));
     }
-    done = true;
-    sock.send("");
   } catch(const char *msg) {
     cout << "Error message: " << msg << endl;
   }
@@ -65,8 +37,14 @@ AppendEntries make_entry(int i){
   return ae;
 }
 
+void dummy(Receiver *r){
+  return r->run();
+}
+
 int main(int argc, char *arg[]) {
   log_init();
+
+  Receiver r(HostEntry(1, "localhost", "2001"));
 
   BOOST_LOG_TRIVIAL(info) << "Starting main()";
   vector<AppendEntries> aes;
@@ -74,24 +52,10 @@ int main(int argc, char *arg[]) {
   aes.push_back(make_entry(2));
   aes.push_back(make_entry(4));
 
-  thread rcv(&receive_msg);
+  thread rcv(&dummy, &r);
   thread snd(&send_msg, aes);
+  this_thread::sleep_for(chrono::milliseconds(aes.size() *1000 + 500));
+  r.stop();
   snd.join();
   rcv.join();
-  KeyValueStore s;
-  s.setValue("key something","value something");
-  s.setValue("key else","value else");
-  s.dump();
-  cout << s.getValue("nonexistant key").length() << endl;
-  IdStore istore;
-  istore.createId("customers");
-  uint64_t id = istore.getValue("customers", 1500);
-  cout << "my range: " << id << endl;
-  id = istore.getValue("customers", 1500);
-  cout << "my new range: " << id << endl;
-  try {
-    cout << istore.getValue("nonexistent key", 100) << endl;
-  } catch(string str) {
-    cerr << "Exception: " << str << endl;
-  }
 }

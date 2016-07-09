@@ -20,10 +20,10 @@ UDPSocket::UDPSocket(string server_name, string service, SocketType s_type){
     throw strerror(errno);
   }
   switch(s_type){
-    case SocketType::server: 
+    case SocketType::serverSocket: 
       bind();
       break;
-    case SocketType::client:
+    case SocketType::clientSocket:
       connect();
       break;
   }

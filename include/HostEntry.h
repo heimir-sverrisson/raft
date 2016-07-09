@@ -11,6 +11,9 @@ class HostEntry{
     inline int getNo() { return m_no;};
     inline string getHost() { return m_host;};
     inline string getService() {return m_service;};
+    inline string to_string() { 
+      return std::to_string(m_no) + ": \"" + m_host + "\", \"" + m_service + "\"";
+    };
   private:
     int m_no;
     string m_host;
