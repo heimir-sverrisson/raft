@@ -8,7 +8,7 @@
 #include <UDPSocket.h>
 
 enum MessageType{
-  client, appendEntries, requestVote
+  unknown = -1, client = 0, appendEntries = 1, requestVote = 2
 };
 
 class Receiver{
@@ -25,6 +25,7 @@ class Receiver{
     bool m_run;
     Queue<AppendEntries> m_AppendEntriesQueue;
     Queue<RequestVote> m_RequestVoteQueue;
+    int split(string& str, MessageType& mType, string& json);
 };
 
 #endif

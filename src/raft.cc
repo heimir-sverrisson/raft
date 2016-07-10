@@ -58,4 +58,8 @@ int main(int argc, char *arg[]) {
   r.stop();
   snd.join();
   rcv.join();
+  while(r.getCount(MessageType::appendEntries) > 0){
+    AppendEntries ae = r.getAppendEntries();
+    cout << ae.to_string() << endl;
+  }
 }

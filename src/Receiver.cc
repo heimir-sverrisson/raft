@@ -21,8 +21,50 @@ Receiver::run(){
         BOOST_LOG_TRIVIAL(info) << "Tick";
         continue;
     }
-    cout << str << endl;
+    MessageType mType;
+    string json;
+    ret = split(str, mType, json);
+    if(ret == 0){
+      switch(mType){
+        case MessageType::appendEntries:
+          {
+            AppendEntries ae;
+            ae.parse_json(json);
+            m_AppendEntriesQueue.push(ae);
+          }
+          break;
+        default:
+          BOOST_LOG_TRIVIAL(error) << "Unknown MessageType: " << str;
+      }
+    } else {
+      BOOST_LOG_TRIVIAL(error) << "Could not split: " << str;
+    }
   }
+}
+
+int
+Receiver::split(string& str, MessageType& mType, string& json){
+  size_t sepPos = str.find_first_of(Config::messageSeparator);
+  if(sepPos == string::npos){
+    BOOST_LOG_TRIVIAL(error) << "No separator found in: " << str;
+    return -1;
+  }
+  int intEnum = stoi(str.substr(0, sepPos));
+  switch(intEnum){
+    case 0: 
+      mType = MessageType::client;
+      break;
+    case 1:
+      mType = MessageType::appendEntries;
+      break;
+    case 2:
+      mType = MessageType::appendEntries;
+      break;
+    default:
+      mType = MessageType::unknown;
+  }
+  json = str.substr(sepPos + 1, str.length() - sepPos - 1);
+  return 0;
 }
 
 int
