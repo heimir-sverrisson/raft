@@ -12,13 +12,29 @@
 #include <Config.h>
 
 
-void send_msg(vector<AppendEntries> aes){
-  BOOST_LOG_TRIVIAL(info) << "Starting thread send_msg()";
+void send_ae_msg(vector<AppendEntries> aes){
+  BOOST_LOG_TRIVIAL(info) << "Starting thread send_aes_msg()";
   char sep = Config::messageSeparator;
   try{
     UDPSocket sock = UDPSocket("localhost", "2001", SocketType::clientSocket);
     for(auto& ae : aes){
       string s = to_string(MessageType::appendEntries) + sep + ae.to_string();
+      sock.send(s);
+      this_thread::sleep_for(chrono::milliseconds(1000));
+    }
+  } catch(const char *msg) {
+    cout << "Error message: " << msg << endl;
+  }
+}
+
+void send_rv_msg(vector<RequestVote> rvs){
+  BOOST_LOG_TRIVIAL(info) << "Starting thread send_rv_msg()";
+  char sep = Config::messageSeparator;
+  try{
+    this_thread::sleep_for(chrono::milliseconds(300));
+    UDPSocket sock = UDPSocket("localhost", "2001", SocketType::clientSocket);
+    for(auto& rv : rvs){
+      string s = to_string(MessageType::requestVote) + sep + rv.to_string();
       sock.send(s);
       this_thread::sleep_for(chrono::milliseconds(1000));
     }
@@ -37,6 +53,11 @@ AppendEntries make_entry(int i){
   return ae;
 }
 
+RequestVote make_vote(int i){
+  RequestVote rv(i + 1, i + 2, i + 3, i + 4);
+  return rv;
+}
+
 void dummy(Receiver *r){
   return r->run();
 }
@@ -51,15 +72,37 @@ int main(int argc, char *arg[]) {
   aes.push_back(make_entry(0));
   aes.push_back(make_entry(2));
   aes.push_back(make_entry(4));
+  aes.push_back(make_entry(5));
+  aes.push_back(make_entry(7));
+  vector<RequestVote> rvs;
+  rvs.push_back(make_vote(0));
+  rvs.push_back(make_vote(10));
+  rvs.push_back(make_vote(11));
+  rvs.push_back(make_vote(13));
+  rvs.push_back(make_vote(17));
 
   thread rcv(&dummy, &r);
-  thread snd(&send_msg, aes);
-  this_thread::sleep_for(chrono::milliseconds(aes.size() *1000 + 500));
+  thread snd_1(&send_ae_msg, aes);
+  thread snd_2(&send_rv_msg, rvs);
+
+  int total_count = aes.size() + rvs.size();
+  int count = 0;
+  do{
+    r.waitForMessage();
+    // Deplete all queues starting with RequestVoteQueue
+    while(r.getCount(MessageType::requestVote) > 0){
+      RequestVote rv = r.getRequestVote();
+      cout << rv.to_string() << endl;
+      count++;
+    }
+    while(r.getCount(MessageType::appendEntries) > 0){
+      AppendEntries ae = r.getAppendEntries();
+      cout << ae.to_string() << endl;
+      count++;
+    }
+  } while(count < total_count);
   r.stop();
-  snd.join();
+  snd_1.join();
+  snd_2.join();
   rcv.join();
-  while(r.getCount(MessageType::appendEntries) > 0){
-    AppendEntries ae = r.getAppendEntries();
-    cout << ae.to_string() << endl;
-  }
 }

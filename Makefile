@@ -7,6 +7,9 @@ test:
 	$(MAKE) -C src
 	$(MAKE) -C test
 
+testrun:
+	$(MAKE) -C test run
+
 lint:
 	$(MAKE) -C src lint
 

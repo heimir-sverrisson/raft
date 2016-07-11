@@ -13,7 +13,7 @@ BOOST_AUTO_TEST_SUITE( raft )
 BOOST_AUTO_TEST_CASE( server_with_timeout )
 {
   log_init();
-  UDPSocket server("localhost", "2001", UDPSocket::SocketType::server);
+  UDPSocket server("localhost", "2001", SocketType::serverSocket);
   std::string empty;
   int ret = server.receive(empty, 10, 100);
   BOOST_REQUIRE( ret == -1 );
@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE( client )
 {
   log_init();
   std::string str="This string will be sent from client to server";
-  UDPSocket client("localhost", "2001", UDPSocket::SocketType::client);
+  UDPSocket client("localhost", "2001", SocketType::clientSocket);
   client.send(str);
   BOOST_REQUIRE( 42 == 42 );
 }

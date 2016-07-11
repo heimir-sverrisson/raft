@@ -7,7 +7,7 @@
 Receiver::Receiver(HostEntry host)
   : m_host(host),
   m_sock(host.getHost(), host.getService(), SocketType::serverSocket),
-  m_run(true)
+  m_run(true), m_isReady(false)
 {}
 
 void
@@ -25,6 +25,9 @@ Receiver::run(){
     string json;
     ret = split(str, mType, json);
     if(ret == 0){
+      unique_lock<mutex> lk(m_mtx);
+      m_isReady = true;
+      m_cond.notify_one();
       switch(mType){
         case MessageType::appendEntries:
           {
@@ -33,12 +36,34 @@ Receiver::run(){
             m_AppendEntriesQueue.push(ae);
           }
           break;
+        case MessageType::requestVote:
+          {
+            RequestVote rv;
+            rv.parse_json(json);
+            m_RequestVoteQueue.push(rv);
+          }
+          break;
+        case MessageType::client:
         default:
           BOOST_LOG_TRIVIAL(error) << "Unknown MessageType: " << str;
       }
     } else {
       BOOST_LOG_TRIVIAL(error) << "Could not split: " << str;
     }
+  }
+}
+
+void
+Receiver::waitForMessage(){
+  if(m_AppendEntriesQueue.size() > 0 ||
+     m_RequestVoteQueue.size() > 0)
+    return;
+  unique_lock<mutex> lk(m_mtx);
+  m_isReady = false;
+  while(!m_isReady){
+    m_cond.wait(lk);
+    if(!m_isReady)
+      BOOST_LOG_TRIVIAL(info) << "Spurious wakeup!";
   }
 }
 
@@ -58,7 +83,7 @@ Receiver::split(string& str, MessageType& mType, string& json){
       mType = MessageType::appendEntries;
       break;
     case 2:
-      mType = MessageType::appendEntries;
+      mType = MessageType::requestVote;
       break;
     default:
       mType = MessageType::unknown;
