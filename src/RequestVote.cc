@@ -5,8 +5,6 @@
 #include <rapidjson/error/en.h>
 #include <boost/log/trivial.hpp>
 
-#include <iostream>
-
 using namespace rapidjson;
 
 RequestVote::RequestVote()
@@ -22,7 +20,6 @@ RequestVote::RequestVote()
   addInt(m_o, "candidateId", m_candidateId);
   addInt(m_o, "lastLogIndex", m_lastLogIndex);
   addInt(m_o, "lastLogTerm", m_lastLogTerm);
-  BOOST_LOG_TRIVIAL(info) << "RequestVote created no params";
 }
 
 RequestVote::RequestVote(const RequestVote& cpy)
@@ -49,7 +46,6 @@ RequestVote::RequestVote(int term, int candidateId, int lastLogIndex, int lastLo
   addInt(m_o, "candidateId", candidateId);
   addInt(m_o, "lastLogIndex", lastLogIndex);
   addInt(m_o, "lastLogTerm", lastLogTerm);
-  BOOST_LOG_TRIVIAL(info) << "RequestVote created w/ params";
 }
 
 void
@@ -78,6 +74,7 @@ RequestVote::parse_json(std::string json){
       GetParseError_En(result.Code()) << " at " << result.Offset();
     return;
   }
+  BOOST_LOG_TRIVIAL(info) << "RequestVote: " << json;
   m_o = Value(kObjectType);
   Value& v_term = d["term"];
   m_term = v_term.GetInt();

@@ -2,69 +2,102 @@
 #include <Config.h>
 #include <string>
 #include <boost/log/trivial.hpp>
+#include <chrono>
+
 #include <iostream>
 
 Receiver::Receiver(HostEntry host)
   : m_host(host),
   m_sock(host.getHost(), host.getService(), SocketType::serverSocket),
-  m_run(true), m_isReady(false)
+  m_run(false), m_isReady(false)
 {}
+
+void 
+Receiver::setRun(bool s){
+  unique_lock<mutex> lk(m_mtx2);
+  m_run = s;
+}
+
+bool
+Receiver::isRunning(){
+  unique_lock<mutex> lk(m_mtx2);
+  return m_run;
+}
+
+void
+Receiver::stop(){
+  setRun(false);
+}
 
 void
 Receiver::run(){
-  int readCount = 0;
-  while(m_run){
+  BOOST_LOG_TRIVIAL(info) << "Receiver started";
+  setRun(true);
+  while(isRunning()) {
     string str;
-    int ret = m_sock.receive(str, Config::maxMessageSize, Config::readPeriod);
-    if(ret < 0){ // Timeout
-      if((readCount++ % 10) == 0)
-        BOOST_LOG_TRIVIAL(info) << "Tick";
-        continue;
-    }
+    int ret = m_sock.receive(str, Config::maxMessageSize);
     MessageType mType;
     string json;
     ret = split(str, mType, json);
     if(ret == 0){
-      unique_lock<mutex> lk(m_mtx);
-      m_isReady = true;
-      m_cond.notify_one();
       switch(mType){
-        case MessageType::appendEntries:
+        case appendEntries:
           {
             AppendEntries ae;
             ae.parse_json(json);
             m_AppendEntriesQueue.push(ae);
           }
           break;
-        case MessageType::requestVote:
+        case requestVote:
           {
             RequestVote rv;
             rv.parse_json(json);
             m_RequestVoteQueue.push(rv);
           }
           break;
-        case MessageType::client:
+        case voteResponse:
+          {
+            VoteResponse vr;
+            vr.parse_json(json);
+            m_VoteResponseQueue.push(vr);
+          }
+          break;
+        case client:
         default:
           BOOST_LOG_TRIVIAL(error) << "Unknown MessageType: " << str;
+      }
+      // Set condition if we got a message
+      {
+        unique_lock<mutex> lk(m_mtx);
+        m_isReady = true;
+        lk.unlock();
+        m_cond.notify_one();
       }
     } else {
       BOOST_LOG_TRIVIAL(error) << "Could not split: " << str;
     }
   }
+  BOOST_LOG_TRIVIAL(info) << "Receiver stopped";
 }
 
-void
-Receiver::waitForMessage(){
+WakeupType
+Receiver::waitForMessage(int timeout){
   if(m_AppendEntriesQueue.size() > 0 ||
-     m_RequestVoteQueue.size() > 0)
-    return;
+     m_RequestVoteQueue.size() > 0   ||
+     m_VoteResponseQueue.size() > 0){
+    return gotMessage;
+  }
+  if(!isRunning()){
+    return notRunning;
+  }
   unique_lock<mutex> lk(m_mtx);
   m_isReady = false;
-  while(!m_isReady){
-    m_cond.wait(lk);
-    if(!m_isReady)
-      BOOST_LOG_TRIVIAL(info) << "Spurious wakeup!";
-  }
+  auto now = std::chrono::system_clock::now();
+  auto until = now + std::chrono::milliseconds(timeout);
+  if(m_cond.wait_until(lk, until) == cv_status::timeout)
+    return timedOut;
+  else
+    return gotMessage;
 }
 
 int
@@ -75,19 +108,7 @@ Receiver::split(string& str, MessageType& mType, string& json){
     return -1;
   }
   int intEnum = stoi(str.substr(0, sepPos));
-  switch(intEnum){
-    case 0: 
-      mType = MessageType::client;
-      break;
-    case 1:
-      mType = MessageType::appendEntries;
-      break;
-    case 2:
-      mType = MessageType::requestVote;
-      break;
-    default:
-      mType = MessageType::unknown;
-  }
+  mType = (MessageType) intEnum;
   json = str.substr(sepPos + 1, str.length() - sepPos - 1);
   return 0;
 }
@@ -95,12 +116,18 @@ Receiver::split(string& str, MessageType& mType, string& json){
 int
 Receiver::getCount(MessageType mType){
   switch(mType){
-    case MessageType::appendEntries:
+    case appendEntries:
       return m_AppendEntriesQueue.size();
-    case MessageType::requestVote:
+    case requestVote:
       return m_RequestVoteQueue.size();
+    case voteResponse:
+      return m_VoteResponseQueue.size();
+    case client:
+      return 0;
     default:
-      throw("Illegal MessageType");
+      string str = "Illegal MessageType: " + to_string(mType);
+      BOOST_LOG_TRIVIAL(error) << str;
+      return 0;
   }
 }
 
@@ -112,4 +139,9 @@ Receiver::getAppendEntries(){
 RequestVote
 Receiver::getRequestVote(){
   return m_RequestVoteQueue.pop();
+}
+
+VoteResponse
+Receiver::getVoteResponse(){
+  return m_VoteResponseQueue.pop();
 }

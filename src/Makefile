@@ -2,7 +2,7 @@ CXX=g++
 CXXFLAGS=-g -std=c++11 -pthread -Wall -pedantic -DBOOST_LOG_DYN_LINK \
 	 -I/usr/local/include -I../include
 BIN=../bin/raft
-LDLIBS=-lboost_log -lboost_log_setup -lboost_thread -lboost_system -lpthread
+LDLIBS=-lboost_log -lboost_log_setup -lboost_system -lboost_thread -lpthread
 
 SRC=$(wildcard *.cc)
 OBJ=$(SRC:%.cc=%.o)
@@ -18,3 +18,5 @@ lint:
 clean:
 	rm -f *.o
 	rm -f $(BIN)
+depend:
+	makedepend -- $(CXXFLAGS) -- $(SRC)

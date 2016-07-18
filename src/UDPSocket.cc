@@ -29,6 +29,10 @@ UDPSocket::UDPSocket(string server_name, string service, SocketType s_type){
   }
 }
 
+UDPSocket::~UDPSocket(){
+  close();
+}
+
 void
 UDPSocket::bind(){
   struct addrinfo *rp;
@@ -38,7 +42,7 @@ UDPSocket::bind(){
       continue;
     if(::bind(socket_fd, rp->ai_addr, rp->ai_addrlen) == 0)
       break;
-    close(socket_fd);
+    ::close(socket_fd);
   }
   freeaddrinfo(results);
 }
@@ -59,27 +63,37 @@ UDPSocket::connect(){
 int
 UDPSocket::receive(string& message, int max_size, int timeout){
   int msg_length;
-  char *msg = new char[max_size];
-  memset(msg, 0, max_size);
   struct pollfd pdfs[1];
+  memset(pdfs, 0, sizeof(pdfs));
 
   if(timeout >= 0) { // Default is -1
     pdfs[0].fd = socket_fd;
     pdfs[0].events = POLLIN;
     poll(pdfs, 1, timeout);
     if((pdfs[0].revents & POLLIN) == 0){
-      delete[] msg;
       return -1;
     }
   }
+  // We are here because we have received a datagram
+  char *msg = new char[max_size];
+  memset(msg, 0, max_size);
   msg_length = recv(socket_fd, msg, max_size, 0);
   if(msg_length < 0){
     BOOST_LOG_TRIVIAL(error) << "UDP recv error: " << strerror(errno);
     throw strerror(errno);
   }
-  message = msg;
+  message.clear();
+  message.append(msg);
   delete[] msg;
   return msg_length;
+}
+
+void
+UDPSocket::close(){
+  if(socket_fd != -1){
+    ::close(socket_fd);
+    socket_fd = -1;
+  }
 }
 
 void

@@ -12,5 +12,13 @@ The following things are starting to work:
 ##Installation on Rasperry Pi
 Install the `boost` library
 * `sudo apt-get install libboost1.55-all`
-Compile the rapidjson from source found at `http://rapidjson.org`
+
+Install Cmake
+* `sudo apt-get install cmake`
+
+Get `rapidjson` from Github
+* `git clone https://github.com/miloyip/rapidjson.git`
+
+Compile the rapidjson from source as described on `http://rapidjson.org`, but make sure to fix the following before you proceed
 * Remove `-march=native` from the `CMAKE_CXX_FLAGS` in the file `CMakeLists.txt`
+* Proceed with the steps described above under `Installation`

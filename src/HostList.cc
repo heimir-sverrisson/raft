@@ -1,11 +1,9 @@
 #include <HostList.h>
 #include <boost/log/trivial.hpp>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 
-HostList::HostList(string filename, int myId)
-  : m_myId(myId) {
+HostList::HostList(string filename, int myId){
   ifstream infile(filename);
   if(!infile){
     string str = "File: " + filename + " not found or access denied!";
@@ -13,6 +11,7 @@ HostList::HostList(string filename, int myId)
     throw(str);
   }
   vector<int> hostIndices;
+  BOOST_LOG_TRIVIAL(info) << "Start of host list";
   while(infile){
     string s;
     if(!getline(infile, s)){
@@ -30,15 +29,40 @@ HostList::HostList(string filename, int myId)
     int hostIndex = stoi(rec[0]); // Will throw an exception on malformed data
     hostIndices.push_back(hostIndex);
     HostEntry h(hostIndex, rec[1], rec[2]);
-    cout << h.to_string() << endl;
+    BOOST_LOG_TRIVIAL(info) << h.to_string();
     m_hosts.push_back(h);
   }
+  BOOST_LOG_TRIVIAL(info) << "End of host list";
   // Check if myId is an index in the file
   if(find(hostIndices.begin(), hostIndices.end(), myId) == hostIndices.end()){
     string str = "Index: " + to_string(myId) + " not found in file: " + filename;
     BOOST_LOG_TRIVIAL(error) << str;
     throw(str);
   }
+}
+
+vector<HostEntry>
+HostList::getAllHosts(){
+  return m_hosts;
+}
+
+HostEntry 
+HostList::getHostById(int id){
+  int theId = -1;
+  HostEntry he(0,"","");
+  for(auto& h : m_hosts){
+    if(h.getNo() == id){
+      theId = h.getNo();
+      he = h;
+      break;
+    }
+  }
+  if(theId == -1){ // Not found
+    string str = "Id: " + to_string(id) + ", not found in HostList";
+    BOOST_LOG_TRIVIAL(error) << str;
+    throw(str);
+  }
+  return he;
 }
 
 string

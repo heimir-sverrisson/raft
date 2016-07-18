@@ -19,6 +19,8 @@ class UDPSocket {
     UDPSocket(string server_name, string service, SocketType s_type);
     int receive(string& message, int max_size, int timeout = -1);
     void send(string message);
+    void close();
+    ~UDPSocket();
   private:
     SocketType my_type;
     int socket_fd;
