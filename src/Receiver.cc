@@ -35,7 +35,9 @@ Receiver::run(){
   setRun(true);
   while(isRunning()) {
     string str;
-    int ret = m_sock.receive(str, Config::maxMessageSize);
+    int ret = m_sock.receive(str, Config::maxMessageSize, 3000);
+    if(ret < 0) // Handle timeout
+      continue;
     MessageType mType;
     string json;
     ret = split(str, mType, json);

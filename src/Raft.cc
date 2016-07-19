@@ -1,6 +1,5 @@
 #include <Raft.h>
-#include <Follower.h>
-#include <Candidate.h>
+#include <Dispatcher.h>
 #include <boost/log/trivial.hpp>
 
 Raft::Raft(string configFile, int myId)
@@ -16,28 +15,8 @@ Raft::run(){
   m_rcv = thread(&Raft::receiveWorker, this);
   // Allow receiver thread to start
   this_thread::sleep_for(chrono::milliseconds(10));
-  Follower f;
-  Candidate c;
-  NodeState next = follower;
-  while(true){
-    switch(next){
-      case follower:
-        next = f.run(m_r, m_ss);
-        break;
-      case candidate:
-        next = c.run(m_r, m_ss);
-        break;
-      case leader:
-        BOOST_LOG_TRIVIAL(info) << "I am the leader!";
-        break;
-      default:
-        BOOST_LOG_TRIVIAL(error) << "Unkown next state: " << next;
-    }
-    if(next == leader){
-      BOOST_LOG_TRIVIAL(info) << "I am the leader!";
-      break;
-    }
-  }
+  Dispatcher d;
+  d.run(m_r, m_ss);
   m_r.stop(); // Stop the receiver thread
   m_rcv.join();
 }

@@ -27,6 +27,9 @@ main(int argc, char *argv[]){
   } catch(char const *chr) {
     cerr << "Runtime exception: " + string(chr) << endl;
     return 2;
+  } catch(char *chr) {
+    cerr << "Runtime exception: " + string(chr) << endl;
+    return 2;
   }
   return 0;
 }

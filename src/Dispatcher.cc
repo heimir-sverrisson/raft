@@ -12,7 +12,9 @@ Dispatcher::run(Receiver& r, ServerState& ss){
     BOOST_LOG_TRIVIAL(error) << str;
     throw(str);
   }
+  srand(ss.getMyId() * getpid());
   int timeout = Config::readPeriod;
+  BOOST_LOG_TRIVIAL(info) << "Dispatcher starting";
   while(true){
     // Wait here for either timeout or a message from our beloved leader
     // some candidate that wants to get elected or some poor client
@@ -21,16 +23,23 @@ Dispatcher::run(Receiver& r, ServerState& ss){
     switch(wake){
       case timedOut: {
           NodeState myState = ss.getNodeState();
+          BOOST_LOG_TRIVIAL(info) << "Timeout in NodeState: " << myState;
           switch(myState){
             // Follower geting timeout will make him a Candidate
             case follower:
-              ss.setTerm(ss.getTerm() + 1); // Increment my termId
-              ss.setNodeState(candidate);       // And become a candidate
+              ss.setNodeState(candidate);  // Wait for a random time
+              timeout = (Config::readPeriod * (rand() % 100)) / 100;
+              BOOST_LOG_TRIVIAL(info) << "Candidate timeout: " << timeout;
               break;
-            // Candiate getting a timeout will have him stay Candidate
+            // Candiate getting a timeout means nobody sent a RequestVote
             case candidate:
-            // A leader does not care for timeouts
+              ss.setTerm(ss.getTerm() + 1); // Increment my termId
+              sendRequestVote(ss, r);
+              break;
+            // A leader should not experience timeouts (less he is in trouble)
             case leader:
+              BOOST_LOG_TRIVIAL(info) << "I am the leader!";
+              return; // TODO: fix!
               break;
             default:
               BOOST_LOG_TRIVIAL(error) << "Illegal State: " << myState;
@@ -42,11 +51,17 @@ Dispatcher::run(Receiver& r, ServerState& ss){
           RequestVote rv = r.getRequestVote();
           BOOST_LOG_TRIVIAL(info) << rv.to_string();
           handleRequestVote(rv, ss);
+          if(ss.getNodeState() == follower){
+            BOOST_LOG_TRIVIAL(info) << "I am the loser!";
+            return; // TODO: fix
+          }
         }
         while(r.getCount(MessageType::appendEntries) > 0){
           AppendEntries ae = r.getAppendEntries();
           BOOST_LOG_TRIVIAL(info) << ae.to_string();
           handleAppendEntries(ae, ss);
+          BOOST_LOG_TRIVIAL(info) << "I am the follower!";
+          return; // TODO: fix!
         }
         while(r.getCount(voteResponse) > 0){
           VoteResponse vr = r.getVoteResponse();
@@ -65,17 +80,18 @@ Dispatcher::run(Receiver& r, ServerState& ss){
         BOOST_LOG_TRIVIAL(error) << "Illegal WakeupType: " << wake;
     } // switch(wake)
   } // while(true);
+  BOOST_LOG_TRIVIAL(info) << "Dispatcher ending";
 }
 
 void
 Dispatcher::handleRequestVote(RequestVote& rv, ServerState& ss){
   int theirTerm = rv.get_term();
-  if(theirTerm <= ss.getTerm()){
+  if(theirTerm < ss.getTerm()){
     sendVoteResponse(rv, ss, 0);
   } else {
     sendVoteResponse(rv, ss, 1);
-    ss.setNodeState(follower);
     ss.setTerm(theirTerm);
+    ss.setNodeState(follower);
   }
 }
 
@@ -86,15 +102,48 @@ Dispatcher::sendVoteResponse(RequestVote& rv, ServerState& ss, int vote){
   int candidate = rv.get_candidateId();
   HostEntry h = ss.getHostList().getHostById(candidate);
   UDPSocket sock(h.getHost(), h.getService(), clientSocket);
-  VoteResponse vr(ss.getMyId(), ss.getTerm(), 0);
+  VoteResponse vr(ss.getMyId(), ss.getTerm(), vote);
   string s = to_string(MessageType::voteResponse) + sep + vr.to_string();
   sock.send(s);
   sock.close();
 }
 
 void
+Dispatcher::sendRequestVote(ServerState& ss, Receiver& r){
+  int myId = ss.getMyId();
+  char sep = Config::messageSeparator;
+  RequestVote rv(ss.getTerm(), myId, ss.getLastLogIndex(), ss.getLastLogTerm());
+  for(HostEntry& h : ss.getHostList().getAllHosts()){
+    if(h.getNo() == myId) // Never send myself
+      continue;
+    UDPSocket sock(h.getHost(), h.getService(), clientSocket);
+    string s = to_string(MessageType::requestVote) + sep + rv.to_string();
+    sock.send(s);
+    sock.close();
+  }
+  BOOST_LOG_TRIVIAL(info) << "Dispatcher: Sent RequestVote";
+}
+
+
+void
 Dispatcher::handleVoteResponse(VoteResponse& vr, ServerState& ss){
   BOOST_LOG_TRIVIAL(info) << "Dispatcher: Handling a VoteResponse";
+  if(vr.get_voteGranted() == 1) {
+    ss.setNodeState(leader);
+    sendAppendEntries(ss, vr.get_nodeId());
+  }
+}
+
+void
+Dispatcher::sendAppendEntries(ServerState& ss, int nodeId){
+  char sep = Config::messageSeparator;
+  BOOST_LOG_TRIVIAL(info) << "Dispatcher: Sending AppendEntries to: " << nodeId;
+  HostEntry h = ss.getHostList().getHostById(nodeId);
+  UDPSocket sock(h.getHost(), h.getService(), clientSocket);
+  AppendEntries ae(ss.getTerm(), ss.getMyId(), 1, 2, 3 ); // TODO: correct params needed
+  string s = to_string(MessageType::appendEntries) + sep + ae.to_string();
+  sock.send(s);
+  sock.close();
 }
 
 void
