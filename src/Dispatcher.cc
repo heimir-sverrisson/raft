@@ -47,7 +47,11 @@ Dispatcher::run(Receiver& r, ServerState& ss){
                   break;
                 case waitForVotes: // Timed out waiting for Votes
                   // Start another election
+                  VoteCollector& vc = ss.getVoteCollector();
+                  vc.clearVotes();
+                  vc.storeVote(ss.getMyId());       // Vote for myself
                   timeout = (Config::readPeriod * (rand() % 100)) / 100;
+                  BOOST_LOG_TRIVIAL(info) << "Candidate timeout: " << timeout;
                   ss.setCandidateState(waitForTimeout);
                   break;
               }
@@ -67,10 +71,6 @@ Dispatcher::run(Receiver& r, ServerState& ss){
           RequestVote rv = r.getRequestVote();
           BOOST_LOG_TRIVIAL(info) << rv.to_string();
           handleRequestVote(rv, ss);
-          if(ss.getNodeState() == follower){
-            BOOST_LOG_TRIVIAL(info) << "I am the loser!";
-            return; // TODO: fix
-          }
         }
         while(r.getCount(MessageType::appendEntries) > 0){
           AppendEntries ae = r.getAppendEntries();
