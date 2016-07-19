@@ -51,8 +51,8 @@ HostList::getHostById(int id){
   int theId = -1;
   HostEntry he(0,"","");
   for(auto& h : m_hosts){
-    if(h.getNo() == id){
-      theId = h.getNo();
+    if(h.getNodeId() == id){
+      theId = h.getNodeId();
       he = h;
       break;
     }

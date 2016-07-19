@@ -1,6 +1,8 @@
-# raft
+# Raft
 Yet another implementation of the RAFT distributed concensus algorithm.
-The implementation is done in C++ and is mostly for my pleasure working on low level things that include networking, distributed systems and hard algorithms.
+Description of the algorithm can be found in the [Stanford Paper](http://web.stanford.edu/~ouster/cgi-bin/papers/raft-atc14).
+The implementation is done in C++ and is mostly for my pleasure working on low level things that include networking, distributed systems and interesting algorithms.
+In the end I want this to run on a cluster (maybe 5) Raspberry Pi's. An implementation of my Distributed Id Service would be the first thing to once this is up and running for real.
 
 ##Status
 The following things are starting to work:

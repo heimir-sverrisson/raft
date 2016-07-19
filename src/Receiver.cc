@@ -35,7 +35,7 @@ Receiver::run(){
   setRun(true);
   while(isRunning()) {
     string str;
-    int ret = m_sock.receive(str, Config::maxMessageSize, 3000);
+    int ret = m_sock.receive(str, Config::maxMessageSize, 2000);
     if(ret < 0) // Handle timeout
       continue;
     MessageType mType;

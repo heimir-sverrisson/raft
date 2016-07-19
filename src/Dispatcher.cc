@@ -26,15 +26,31 @@ Dispatcher::run(Receiver& r, ServerState& ss){
           BOOST_LOG_TRIVIAL(info) << "Timeout in NodeState: " << myState;
           switch(myState){
             // Follower geting timeout will make him a Candidate
-            case follower:
-              ss.setNodeState(candidate);  // Wait for a random time
-              timeout = (Config::readPeriod * (rand() % 100)) / 100;
-              BOOST_LOG_TRIVIAL(info) << "Candidate timeout: " << timeout;
+            case follower: {
+                ss.setNodeState(candidate);  // Next state is candidate
+                ss.setCandidateState(waitForTimeout);
+                VoteCollector& vc = ss.getVoteCollector();
+                vc.clearVotes();
+                vc.storeVote(ss.getMyId());       // Vote for myself
+                timeout = (Config::readPeriod * (rand() % 100)) / 100;
+                BOOST_LOG_TRIVIAL(info) << "Candidate timeout: " << timeout;
+              }
               break;
             // Candiate getting a timeout means nobody sent a RequestVote
             case candidate:
-              ss.setTerm(ss.getTerm() + 1); // Increment my termId
-              sendRequestVote(ss, r);
+              switch(ss.getCandidateState()){
+                case waitForTimeout:
+                  ss.setTerm(ss.getTerm() + 1); // Increment my termId
+                  timeout = Config::readPeriod;
+                  ss.setCandidateState(waitForVotes);
+                  sendRequestVote(ss, r);
+                  break;
+                case waitForVotes: // Timed out waiting for Votes
+                  // Start another election
+                  timeout = (Config::readPeriod * (rand() % 100)) / 100;
+                  ss.setCandidateState(waitForTimeout);
+                  break;
+              }
               break;
             // A leader should not experience timeouts (less he is in trouble)
             case leader:
@@ -114,7 +130,7 @@ Dispatcher::sendRequestVote(ServerState& ss, Receiver& r){
   char sep = Config::messageSeparator;
   RequestVote rv(ss.getTerm(), myId, ss.getLastLogIndex(), ss.getLastLogTerm());
   for(HostEntry& h : ss.getHostList().getAllHosts()){
-    if(h.getNo() == myId) // Never send myself
+    if(h.getNodeId() == myId) // Never send myself
       continue;
     UDPSocket sock(h.getHost(), h.getService(), clientSocket);
     string s = to_string(MessageType::requestVote) + sep + rv.to_string();
@@ -128,9 +144,13 @@ Dispatcher::sendRequestVote(ServerState& ss, Receiver& r){
 void
 Dispatcher::handleVoteResponse(VoteResponse& vr, ServerState& ss){
   BOOST_LOG_TRIVIAL(info) << "Dispatcher: Handling a VoteResponse";
-  if(vr.get_voteGranted() == 1) {
-    ss.setNodeState(leader);
-    sendAppendEntries(ss, vr.get_nodeId());
+  if(vr.getVoteGranted() == 1) {
+    VoteCollector& vc = ss.getVoteCollector();
+    vc.storeVote(vr.getNodeId());
+    if(vc.isElected()){
+      ss.setNodeState(leader);
+      sendAppendEntries(ss, vr.getNodeId());
+    }
   }
 }
 
