@@ -13,11 +13,11 @@ class AppendEntries {
     void parse_json(std::string json);
     std::string to_string();
     std::string get_entries();
-    inline int get_term(){ return m_term; };
-    inline int get_leaderId(){ return m_leaderId; };
-    inline int get_prevLogIndex(){ return m_prevLogIndex; };
-    inline int get_prevLogTerm(){ return m_prevLogTerm; };
-    inline int get_leaderCommit(){ return m_leaderCommit; };
+    inline int getTerm(){ return m_term; };
+    inline int getLeaderId(){ return m_leaderId; };
+    inline int getPrevLogIndex(){ return m_prevLogIndex; };
+    inline int getPrevLogTerm(){ return m_prevLogTerm; };
+    inline int getLeaderCommit(){ return m_leaderCommit; };
   private:
     void addInt(rapidjson::Value& o, const char *key, int value);
     rapidjson::Document m_d;

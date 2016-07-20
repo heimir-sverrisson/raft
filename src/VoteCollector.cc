@@ -4,7 +4,7 @@
 
 VoteCollector::VoteCollector(HostList hl){
   // Get all host ids
-  for( HostEntry& h : hl.getAllHosts()){
+  for( HostEntry& h : hl.getHosts()){
     m_ids.insert(h.getNodeId());
   }
 }

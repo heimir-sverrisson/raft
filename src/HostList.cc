@@ -41,11 +41,6 @@ HostList::HostList(string filename, int myId){
   }
 }
 
-vector<HostEntry>
-HostList::getAllHosts(){
-  return m_hosts;
-}
-
 HostEntry 
 HostList::getHostById(int id){
   int theId = -1;

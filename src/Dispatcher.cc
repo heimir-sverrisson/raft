@@ -126,7 +126,7 @@ Dispatcher::sendRequestVote(ServerState& ss, Receiver& r){
   int myId = ss.getMyId();
   char sep = Config::messageSeparator;
   RequestVote rv(ss.getTerm(), myId, ss.getLastLogIndex(), ss.getLastLogTerm());
-  for(HostEntry& h : ss.getHostList().getAllHosts()){
+  for(HostEntry& h : ss.getHostList().getHosts()){
     if(h.getNodeId() == myId) // Never send to myself
       continue;
     UDPSocket sock(h.getHost(), h.getService(), clientSocket);
@@ -159,7 +159,7 @@ Dispatcher::sendAppendEntries(ServerState& ss){
   BOOST_LOG_TRIVIAL(info) << "Dispatcher: Sending AppendEntries to all";
   AppendEntries ae(ss.getTerm(), ss.getMyId(), 1, 2, 3 ); // TODO: correct params needed
   string s = to_string(MessageType::appendEntries) + sep + ae.to_string();
-  for(HostEntry& h : ss.getHostList().getAllHosts()){
+  for(HostEntry& h : ss.getHostList().getHosts()){
     if(h.getNodeId() == ss.getMyId()) // Never send to myself
       continue;
     UDPSocket sock(h.getHost(), h.getService(), clientSocket);

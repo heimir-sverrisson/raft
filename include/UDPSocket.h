@@ -16,15 +16,15 @@ enum SocketType { serverSocket, clientSocket };
 
 class UDPSocket {
   public:
-    UDPSocket(string server_name, string service, SocketType s_type);
+    UDPSocket(string server_name, string service, SocketType socketType);
     int receive(string& message, int max_size, int timeout = -1);
     void send(string message);
     void close();
     ~UDPSocket();
   private:
-    SocketType my_type;
-    int socket_fd;
-    struct addrinfo *results;
+    SocketType m_socketType;
+    int m_socketFd;
+    struct addrinfo *m_results;
     void bind();
     void connect();
 };

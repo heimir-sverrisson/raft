@@ -10,7 +10,7 @@ using namespace std;
 class HostList{
   public:
     HostList(string filename, int myId);
-    vector<HostEntry> getAllHosts();
+    inline vector<HostEntry> getHosts() { return m_hosts; };
     HostEntry getHostById(int id);
   private:
     vector<HostEntry> m_hosts;

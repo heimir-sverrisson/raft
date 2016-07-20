@@ -17,5 +17,3 @@ clean:
 	rm -f *.log
 	$(MAKE) -C src clean
 	$(MAKE) -C test clean
-depend:
-	$(MAKE) -C src depend

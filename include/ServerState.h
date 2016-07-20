@@ -21,8 +21,8 @@ class ServerState {
     inline HostList getHostList() { return m_hostList; };
     inline NodeState getNodeState() { return m_nodeState; };
     inline CandidateState getCandidateState() { return m_candidateState; };
-    inline int getMyId() { return m_myId; };
     inline int getTerm() { return m_term; };
+    inline int getMyId() { return m_myId; };
     inline int getLastLogIndex() { return m_lastLogIndex; };
     inline int getLastLogTerm() { return m_lastLogTerm; };
     inline VoteCollector& getVoteCollector() { return m_voteCollector; };
