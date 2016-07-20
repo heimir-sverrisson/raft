@@ -13,10 +13,10 @@ class RequestVote {
     void parse_json(std::string json);
     std::string to_string();
     std::string get_entries();
-    inline int get_term(){ return m_term; };
-    inline int get_candidateId(){ return m_candidateId; };
-    inline int get_lastLogIndex(){ return m_lastLogIndex; };
-    inline int get_lastLogTerm(){ return m_lastLogTerm; };
+    inline int getTerm(){ return m_term; };
+    inline int getCandidateId(){ return m_candidateId; };
+    inline int getLastLogIndex(){ return m_lastLogIndex; };
+    inline int getLastLogTerm(){ return m_lastLogTerm; };
   private:
     void addInt(rapidjson::Value& o, const char *key, int value);
     rapidjson::Document m_d;

@@ -3,6 +3,7 @@
 
 #include <Receiver.h>
 #include <ServerState.h>
+#include <Sender.h>
 
 using namespace std;
 
@@ -11,13 +12,11 @@ class Dispatcher{
     void run(Receiver& r, ServerState& ss);
   private:
     int m_timeout;
+    Sender m_s;
     void handleRequestVote(RequestVote& rv, ServerState& ss);
     void handleVoteResponse(VoteResponse& vr, ServerState& ss);
     void handleAppendEntries(AppendEntries& ae, ServerState& ss);
     void handleClientMessage();
-    void sendRequestVote(ServerState& ss, Receiver& r);
-    void sendVoteResponse(RequestVote& rv, ServerState& ss, int vote);
-    void sendAppendEntries(ServerState& ss);
 };
 
 #endif
