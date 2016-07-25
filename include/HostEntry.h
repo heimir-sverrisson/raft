@@ -8,19 +8,19 @@ using namespace std;
 class HostEntry{
   public:
     HostEntry(int nodeId, string host, string service);
-    inline int getNodeId() { return m_nodeId;};
-    inline string getHost() { return m_host;};
-    inline string getService() {return m_service;};
+    inline int getNodeId() { return nodeId_;};
+    inline string getHost() { return host_;};
+    inline string getService() {return service_;};
     inline string to_string() { 
-      return std::to_string(m_nodeId) + ": \"" + m_host + "\", \"" + m_service + "\"";
+      return std::to_string(nodeId_) + ": \"" + host_ + "\", \"" + service_ + "\"";
     };
   private:
-    int m_nodeId;
-    string m_host;
-    string m_service;
+    int nodeId_;
+    string host_;
+    string service_;
 };
 
 inline HostEntry::HostEntry(int nodeId, string host, string service)
-  : m_nodeId(nodeId), m_host(host), m_service(service) {}
+  : nodeId_(nodeId), host_(host), service_(service) {}
 
 #endif

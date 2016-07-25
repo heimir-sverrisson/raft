@@ -5,20 +5,20 @@
 VoteCollector::VoteCollector(HostList hl){
   // Get all host ids
   for( HostEntry& h : hl.getHosts()){
-    m_ids.insert(h.getNodeId());
+    ids_.insert(h.getNodeId());
   }
 }
 
 void
 VoteCollector::storeVote(int id){
   // Check if id is there at all
-  if(m_ids.find(id) == m_ids.end()){
+  if(ids_.find(id) == ids_.end()){
     BOOST_LOG_TRIVIAL(error) << "NodeId " << id << " does not exist!";
     return;
   }
   // Check if id is there already!
-  if(m_votes.find(id) == m_votes.end()){
-    m_votes.insert(id);
+  if(votes_.find(id) == votes_.end()){
+    votes_.insert(id);
     BOOST_LOG_TRIVIAL(error) << "NodeId " << id << " voted for me";
   } else {
     BOOST_LOG_TRIVIAL(info) << "NodeId " << id << " already exists!";
@@ -27,10 +27,10 @@ VoteCollector::storeVote(int id){
 
 bool
 VoteCollector::isElected(){
-  return (m_votes.size() > m_ids.size()/2) ? true : false;
+  return (votes_.size() > ids_.size()/2) ? true : false;
 }
 
 void
 VoteCollector::clearVotes(){
-  m_votes.clear();
+  votes_.clear();
 }

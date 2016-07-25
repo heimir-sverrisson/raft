@@ -32,18 +32,18 @@ class Receiver{
     bool isRunning();
     WakeupType waitForMessage(int timeout);
   private:
-    HostEntry m_host;
-    UDPSocket m_sock;
-    bool m_run;
-    bool m_isReady;
-    Queue<AppendEntries> m_AppendEntriesQueue;
-    Queue<RequestVote> m_RequestVoteQueue;
-    Queue<VoteResponse> m_VoteResponseQueue;
+    HostEntry host_;
+    UDPSocket sock_;
+    bool run_;
+    bool isReady_;
+    Queue<AppendEntries> AppendEntriesQueue_;
+    Queue<RequestVote> RequestVoteQueue_;
+    Queue<VoteResponse> VoteResponseQueue_;
     int split(string& str, MessageType& mType, string& json);
     void setRun(bool s);
-    mutex m_mtx;
-    mutex m_mtx2;
-    condition_variable m_cond;
+    mutex mtx_;
+    mutex mtx2_;
+    condition_variable cond_;
 };
 
 #endif

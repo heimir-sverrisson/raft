@@ -9,9 +9,9 @@ using namespace std;
 class KeyValueStore{
   public:
     void dump();
-    inline void setValue(string key, string value) { m[key] = value;};
-    inline string getValue(string key) { return m[key];};
+    inline void setValue(string key, string value) { m_[key] = value;};
+    inline string getValue(string key) { return m_[key];};
   private:
-    unordered_map<string, string> m; 
+    unordered_map<string, string> m_; 
 };
 #endif

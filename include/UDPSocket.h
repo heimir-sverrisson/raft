@@ -22,9 +22,9 @@ class UDPSocket {
     void close();
     ~UDPSocket();
   private:
-    SocketType m_socketType;
-    int m_socketFd;
-    struct addrinfo *m_results;
+    SocketType socketType_;
+    int socketFd_;
+    struct addrinfo *results_;
     void bind();
     void connect();
 };

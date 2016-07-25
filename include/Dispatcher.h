@@ -11,8 +11,8 @@ class Dispatcher{
   public:
     void run(Receiver& r, ServerState& ss);
   private:
-    int m_timeout;
-    Sender m_s;
+    int timeout_;
+    Sender s_;
     void handleRequestVote(RequestVote& rv, ServerState& ss);
     void handleVoteResponse(VoteResponse& vr, ServerState& ss);
     void handleAppendEntries(AppendEntries& ae, ServerState& ss);

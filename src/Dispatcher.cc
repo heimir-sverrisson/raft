@@ -13,13 +13,13 @@ Dispatcher::run(Receiver& r, ServerState& ss){
     throw(str);
   }
   srand(ss.getMyId() * getpid());
-  m_timeout = Config::readPeriod;
+  timeout_ = Config::readPeriod;
   BOOST_LOG_TRIVIAL(info) << "Dispatcher starting";
   while(true){
     // Wait here for either timeout or a message from our beloved leader
     // some candidate that wants to get elected or some poor client
     // that thinks we are the leader.
-    WakeupType wake = r.waitForMessage(m_timeout);
+    WakeupType wake = r.waitForMessage(timeout_);
     switch(wake){
       case timedOut: {
           NodeState myState = ss.getNodeState();
@@ -32,8 +32,8 @@ Dispatcher::run(Receiver& r, ServerState& ss){
                 VoteCollector& vc = ss.getVoteCollector();
                 vc.clearVotes();
                 vc.storeVote(ss.getMyId());       // Vote for myself
-                m_timeout = (Config::readPeriod * (rand() % 100)) / 100;
-                BOOST_LOG_TRIVIAL(info) << "Candidate timeout: " << m_timeout;
+                timeout_ = (Config::readPeriod * (rand() % 100)) / 100;
+                BOOST_LOG_TRIVIAL(info) << "Candidate timeout: " << timeout_;
               }
               break;
             // Candiate getting a timeout means nobody sent a RequestVote
@@ -41,24 +41,24 @@ Dispatcher::run(Receiver& r, ServerState& ss){
               switch(ss.getCandidateState()){
                 case waitForTimeout:
                   ss.setTerm(ss.getTerm() + 1); // Increment my termId
-                  m_timeout = Config::readPeriod;
+                  timeout_ = Config::readPeriod;
                   ss.setCandidateState(waitForVotes);
-                  m_s.sendRequestVote(ss);
+                  s_.sendRequestVote(ss);
                   break;
                 case waitForVotes: // Timed out waiting for Votes
                   // Start another election
                   VoteCollector& vc = ss.getVoteCollector();
                   vc.clearVotes();
                   vc.storeVote(ss.getMyId());       // Vote for myself
-                  m_timeout = (Config::readPeriod * (rand() % 100)) / 100;
-                  BOOST_LOG_TRIVIAL(info) << "Candidate timeout: " << m_timeout;
+                  timeout_ = (Config::readPeriod * (rand() % 100)) / 100;
+                  BOOST_LOG_TRIVIAL(info) << "Candidate timeout: " << timeout_;
                   ss.setCandidateState(waitForTimeout);
                   break;
               }
               break;
             // A leader should not experience timeouts (less he is in trouble)
             case leader:
-              m_s.sendAppendEntries(ss);
+              s_.sendAppendEntries(ss);
               break;
             default:
               BOOST_LOG_TRIVIAL(error) << "Illegal State: " << myState;
@@ -101,9 +101,9 @@ Dispatcher::handleRequestVote(RequestVote& rv, ServerState& ss){
   int theirTerm = rv.getTerm();
   int nodeId = rv.getCandidateId();
   if(theirTerm < ss.getTerm()){
-    m_s.sendVoteResponse(ss, nodeId, 0);
+    s_.sendVoteResponse(ss, nodeId, 0);
   } else {
-    m_s.sendVoteResponse(ss, nodeId, 1);
+    s_.sendVoteResponse(ss, nodeId, 1);
     ss.setTerm(theirTerm);
     ss.setNodeState(follower);
   }
@@ -118,8 +118,8 @@ Dispatcher::handleVoteResponse(VoteResponse& vr, ServerState& ss){
     if(vc.isElected()){
       BOOST_LOG_TRIVIAL(info) << "I am now the leader!";
       ss.setNodeState(leader);
-      m_timeout = Config::leaderPeriod;
-      m_s.sendAppendEntries(ss);
+      timeout_ = Config::leaderPeriod;
+      s_.sendAppendEntries(ss);
     }
   }
 }

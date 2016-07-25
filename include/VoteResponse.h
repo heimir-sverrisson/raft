@@ -11,17 +11,17 @@ class VoteResponse {
     VoteResponse(int nodeId, int term, int voteGranted);
     void parse_json(std::string json);
     std::string to_string();
-    inline int getNodeId(){ return m_nodeId; };
-    inline int getTerm(){ return m_term; };
-    inline int getVoteGranted(){ return m_voteGranted; };
+    inline int getNodeId(){ return nodeId_; };
+    inline int getTerm(){ return term_; };
+    inline int getVoteGranted(){ return voteGranted_; };
   private:
     void addInt(rapidjson::Value& o, const char *key, int value);
-    rapidjson::Document m_d;
-    rapidjson::Value m_o;
-    rapidjson::Document::AllocatorType& m_allocator;
-    int m_nodeId;
-    int m_term;
-    int m_voteGranted;
+    rapidjson::Document d_;
+    rapidjson::Value o_;
+    rapidjson::Document::AllocatorType& allocator_;
+    int nodeId_;
+    int term_;
+    int voteGranted_;
 };
 
 #endif

@@ -18,38 +18,38 @@ enum CandidateState {
 class ServerState {
   public:
     ServerState(HostList hostList, int myId);
-    inline HostList getHostList() { return m_hostList; };
-    inline NodeState getNodeState() { return m_nodeState; };
-    inline CandidateState getCandidateState() { return m_candidateState; };
-    inline int getTerm() { return m_term; };
-    inline int getMyId() { return m_myId; };
-    inline int getLastLogIndex() { return m_lastLogIndex; };
-    inline int getLastLogTerm() { return m_lastLogTerm; };
-    inline VoteCollector& getVoteCollector() { return m_voteCollector; };
-    inline void setNodeState(NodeState nodeState) { m_nodeState = nodeState; };
-    inline void setCandidateState(CandidateState candidateState) { m_candidateState = candidateState; };
-    inline void setTerm(int term) { m_term = term; };
-    inline void setLastLogIndex(int lastLogIndex) { m_lastLogIndex = lastLogIndex; };
-    inline void setLastLogTerm(int lastLogTerm) { m_lastLogTerm = lastLogTerm; };
+    inline HostList getHostList() { return hostList_; };
+    inline NodeState getNodeState() { return nodeState_; };
+    inline CandidateState getCandidateState() { return candidateState_; };
+    inline int getTerm() { return term_; };
+    inline int getMyId() { return myId_; };
+    inline int getLastLogIndex() { return lastLogIndex_; };
+    inline int getLastLogTerm() { return lastLogTerm_; };
+    inline VoteCollector& getVoteCollector() { return voteCollector_; };
+    inline void setNodeState(NodeState nodeState) { nodeState_ = nodeState; };
+    inline void setCandidateState(CandidateState candidateState) { candidateState_ = candidateState; };
+    inline void setTerm(int term) { term_ = term; };
+    inline void setLastLogIndex(int lastLogIndex) { lastLogIndex_ = lastLogIndex; };
+    inline void setLastLogTerm(int lastLogTerm) { lastLogTerm_ = lastLogTerm; };
   private:
-    HostList m_hostList;
-    NodeState m_nodeState;
-    CandidateState m_candidateState;
-    int m_term;
-    int m_myId;
-    int m_lastLogIndex;
-    int m_lastLogTerm;
-    VoteCollector m_voteCollector;
+    HostList hostList_;
+    NodeState nodeState_;
+    CandidateState candidateState_;
+    int term_;
+    int myId_;
+    int lastLogIndex_;
+    int lastLogTerm_;
+    VoteCollector voteCollector_;
 };
 
 inline ServerState::ServerState(HostList hostList, int myId)
-  : m_hostList(hostList), 
-    m_nodeState(follower),
-    m_term(0),
-    m_myId(myId),
-    m_lastLogIndex(0),
-    m_lastLogTerm(0),
-    m_voteCollector(hostList) 
+  : hostList_(hostList), 
+    nodeState_(follower),
+    term_(0),
+    myId_(myId),
+    lastLogIndex_(0),
+    lastLogTerm_(0),
+    voteCollector_(hostList) 
 {}
 
 #endif

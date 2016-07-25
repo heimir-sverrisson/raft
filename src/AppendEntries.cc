@@ -10,58 +10,58 @@
 using namespace rapidjson;
 
 AppendEntries::AppendEntries()
-  : m_allocator(m_d.GetAllocator())
+  : allocator_(d_.GetAllocator())
 {
-  m_term = 0;
-  m_leaderId = 0;
-  m_prevLogIndex = 0;
-  m_prevLogTerm = 0;
-  m_leaderCommit = 0;
-  m_o = Value(kObjectType);
+  term_ = 0;
+  leaderId_ = 0;
+  prevLogIndex_ = 0;
+  prevLogTerm_ = 0;
+  leaderCommit_ = 0;
+  o_ = Value(kObjectType);
 
-  addInt(m_o, "term", m_term);
-  addInt(m_o, "leaderId", m_leaderId);
-  addInt(m_o, "prevLogIndex", m_prevLogIndex);
-  addInt(m_o, "prevLogTerm", m_prevLogTerm);
-  addInt(m_o, "leaderCommit", m_leaderCommit);
-  m_o.AddMember("entries", Value(kArrayType), m_allocator);
+  addInt(o_, "term", term_);
+  addInt(o_, "leaderId", leaderId_);
+  addInt(o_, "prevLogIndex", prevLogIndex_);
+  addInt(o_, "prevLogTerm", prevLogTerm_);
+  addInt(o_, "leaderCommit", leaderCommit_);
+  o_.AddMember("entries", Value(kArrayType), allocator_);
 }
 
 AppendEntries::AppendEntries(const AppendEntries& cpy)
-  : m_allocator(m_d.GetAllocator())
+  : allocator_(d_.GetAllocator())
 {
-  m_term = cpy.m_term;
-  m_leaderId = cpy.m_leaderId;
-  m_prevLogIndex = cpy.m_prevLogIndex;
-  m_prevLogTerm = cpy.m_prevLogTerm;
-  m_leaderCommit = cpy.m_leaderCommit;
-  m_d.CopyFrom(cpy.m_d, m_allocator);
-  m_o.CopyFrom(cpy.m_o, m_allocator);
+  term_ = cpy.term_;
+  leaderId_ = cpy.leaderId_;
+  prevLogIndex_ = cpy.prevLogIndex_;
+  prevLogTerm_ = cpy.prevLogTerm_;
+  leaderCommit_ = cpy.leaderCommit_;
+  d_.CopyFrom(cpy.d_, allocator_);
+  o_.CopyFrom(cpy.o_, allocator_);
 }
 
 AppendEntries::AppendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, int leaderCommit)
-  : m_allocator(m_d.GetAllocator())
+  : allocator_(d_.GetAllocator())
 {
-  m_term = term;
-  m_leaderId = leaderId;
-  m_prevLogIndex = prevLogIndex;
-  m_prevLogTerm = prevLogTerm;
-  m_leaderCommit = leaderCommit;
-  m_o = Value(kObjectType);
+  term_ = term;
+  leaderId_ = leaderId;
+  prevLogIndex_ = prevLogIndex;
+  prevLogTerm_ = prevLogTerm;
+  leaderCommit_ = leaderCommit;
+  o_ = Value(kObjectType);
 
-  addInt(m_o, "term", term);
-  addInt(m_o, "leaderId", leaderId);
-  addInt(m_o, "prevLogIndex", prevLogIndex);
-  addInt(m_o, "prevLogTerm", prevLogTerm);
-  addInt(m_o, "leaderCommit", leaderCommit);
-  m_o.AddMember("entries", Value(kArrayType), m_allocator);
+  addInt(o_, "term", term);
+  addInt(o_, "leaderId", leaderId);
+  addInt(o_, "prevLogIndex", prevLogIndex);
+  addInt(o_, "prevLogTerm", prevLogTerm);
+  addInt(o_, "leaderCommit", leaderCommit);
+  o_.AddMember("entries", Value(kArrayType), allocator_);
 }
 
 void
 AppendEntries::addInt(Value& o, const char *key, int value){
-  Value k(key, m_allocator);
+  Value k(key, allocator_);
   Value v(value);
-  o.AddMember(k, v, m_allocator);
+  o.AddMember(k, v, allocator_);
 }
 
 std::string
@@ -69,7 +69,7 @@ AppendEntries::to_string(){
   std::string str;
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
-  m_o.Accept(writer);
+  o_.Accept(writer);
   str = buffer.GetString();
   return str;
 }
@@ -79,7 +79,7 @@ AppendEntries::get_entries(){
   std::string str;
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
-  m_o["entries"].Accept(writer);
+  o_["entries"].Accept(writer);
   str = buffer.GetString();
   return str;
 }
@@ -93,33 +93,33 @@ AppendEntries::parse_json(std::string json){
       GetParseError_En(result.Code()) << " at " << result.Offset();
     return;
   }
-  m_o = Value(kObjectType);
+  o_ = Value(kObjectType);
   Value& v_term = d["term"];
-  m_term = v_term.GetInt();
-  m_o.AddMember("term",v_term, m_allocator);
+  term_ = v_term.GetInt();
+  o_.AddMember("term",v_term, allocator_);
 
   Value& v_leaderId = d["leaderId"];
-  m_leaderId = v_leaderId.GetInt();
-  m_o.AddMember("leaderId",v_leaderId, m_allocator);
+  leaderId_ = v_leaderId.GetInt();
+  o_.AddMember("leaderId",v_leaderId, allocator_);
 
   Value& v_prevLogIndex = d["prevLogIndex"];
-  m_prevLogIndex = v_prevLogIndex.GetInt();
-  m_o.AddMember("prevLogIndex",v_prevLogIndex, m_allocator);
+  prevLogIndex_ = v_prevLogIndex.GetInt();
+  o_.AddMember("prevLogIndex",v_prevLogIndex, allocator_);
 
   Value& v_prevLogTerm = d["prevLogTerm"];
-  m_prevLogTerm = v_prevLogTerm.GetInt();
-  m_o.AddMember("prevLogTerm",v_prevLogTerm, m_allocator);
+  prevLogTerm_ = v_prevLogTerm.GetInt();
+  o_.AddMember("prevLogTerm",v_prevLogTerm, allocator_);
 
   Value& v_leaderCommit = d["leaderCommit"];
-  m_leaderCommit = v_leaderCommit.GetInt();
-  m_o.AddMember("leaderCommit",v_leaderCommit, m_allocator);
+  leaderCommit_ = v_leaderCommit.GetInt();
+  o_.AddMember("leaderCommit",v_leaderCommit, allocator_);
 
   Value v_entries;
-  v_entries.CopyFrom(d["entries"], m_allocator);
-  m_o.AddMember("entries", v_entries, m_allocator);
+  v_entries.CopyFrom(d["entries"], allocator_);
+  o_.AddMember("entries", v_entries, allocator_);
 }
 
 void
 AppendEntries::addEntry(Value& v){
- m_o["entries"].PushBack(v, m_allocator);
+ o_["entries"].PushBack(v, allocator_);
 }

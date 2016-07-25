@@ -7,21 +7,21 @@
 #include <iostream>
 
 Receiver::Receiver(HostEntry host)
-  : m_host(host),
-  m_sock(host.getHost(), host.getService(), SocketType::serverSocket),
-  m_run(false), m_isReady(false)
+  : host_(host),
+  sock_(host.getHost(), host.getService(), SocketType::serverSocket),
+  run_(false), isReady_(false)
 {}
 
 void 
 Receiver::setRun(bool s){
-  unique_lock<mutex> lk(m_mtx2);
-  m_run = s;
+  unique_lock<mutex> lk(mtx2_);
+  run_ = s;
 }
 
 bool
 Receiver::isRunning(){
-  unique_lock<mutex> lk(m_mtx2);
-  return m_run;
+  unique_lock<mutex> lk(mtx2_);
+  return run_;
 }
 
 void
@@ -35,7 +35,7 @@ Receiver::run(){
   setRun(true);
   while(isRunning()) {
     string str;
-    int ret = m_sock.receive(str, Config::maxMessageSize, 2000);
+    int ret = sock_.receive(str, Config::maxMessageSize, 2000);
     if(ret < 0) // Handle timeout
       continue;
     MessageType mType;
@@ -47,21 +47,21 @@ Receiver::run(){
           {
             AppendEntries ae;
             ae.parse_json(json);
-            m_AppendEntriesQueue.push(ae);
+            AppendEntriesQueue_.push(ae);
           }
           break;
         case requestVote:
           {
             RequestVote rv;
             rv.parse_json(json);
-            m_RequestVoteQueue.push(rv);
+            RequestVoteQueue_.push(rv);
           }
           break;
         case voteResponse:
           {
             VoteResponse vr;
             vr.parse_json(json);
-            m_VoteResponseQueue.push(vr);
+            VoteResponseQueue_.push(vr);
           }
           break;
         case client:
@@ -70,10 +70,10 @@ Receiver::run(){
       }
       // Set condition if we got a message
       {
-        unique_lock<mutex> lk(m_mtx);
-        m_isReady = true;
+        unique_lock<mutex> lk(mtx_);
+        isReady_ = true;
         lk.unlock();
-        m_cond.notify_one();
+        cond_.notify_one();
       }
     } else {
       BOOST_LOG_TRIVIAL(error) << "Could not split: " << str;
@@ -84,19 +84,19 @@ Receiver::run(){
 
 WakeupType
 Receiver::waitForMessage(int timeout){
-  if(m_AppendEntriesQueue.size() > 0 ||
-     m_RequestVoteQueue.size() > 0   ||
-     m_VoteResponseQueue.size() > 0){
+  if(AppendEntriesQueue_.size() > 0 ||
+     RequestVoteQueue_.size() > 0   ||
+     VoteResponseQueue_.size() > 0){
     return gotMessage;
   }
   if(!isRunning()){
     return notRunning;
   }
-  unique_lock<mutex> lk(m_mtx);
-  m_isReady = false;
+  unique_lock<mutex> lk(mtx_);
+  isReady_ = false;
   auto now = std::chrono::system_clock::now();
   auto until = now + std::chrono::milliseconds(timeout);
-  if(m_cond.wait_until(lk, until) == cv_status::timeout)
+  if(cond_.wait_until(lk, until) == cv_status::timeout)
     return timedOut;
   else
     return gotMessage;
@@ -119,11 +119,11 @@ int
 Receiver::getCount(MessageType mType){
   switch(mType){
     case appendEntries:
-      return m_AppendEntriesQueue.size();
+      return AppendEntriesQueue_.size();
     case requestVote:
-      return m_RequestVoteQueue.size();
+      return RequestVoteQueue_.size();
     case voteResponse:
-      return m_VoteResponseQueue.size();
+      return VoteResponseQueue_.size();
     case client:
       return 0;
     default:
@@ -135,15 +135,15 @@ Receiver::getCount(MessageType mType){
 
 AppendEntries
 Receiver::getAppendEntries(){
-  return m_AppendEntriesQueue.pop();
+  return AppendEntriesQueue_.pop();
 }
 
 RequestVote
 Receiver::getRequestVote(){
-  return m_RequestVoteQueue.pop();
+  return RequestVoteQueue_.pop();
 }
 
 VoteResponse
 Receiver::getVoteResponse(){
-  return m_VoteResponseQueue.pop();
+  return VoteResponseQueue_.pop();
 }

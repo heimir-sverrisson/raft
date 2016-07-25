@@ -8,13 +8,13 @@
 
 UDPSocket::UDPSocket(string server_name, string service, SocketType socketType){
   struct addrinfo hints;
-  m_socketType = socketType;
+  socketType_ = socketType;
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_DGRAM;
 
   int rv = getaddrinfo(server_name.c_str(), service.c_str(), 
-                                        &hints, &m_results);
+                                        &hints, &results_);
   if(rv != 0){
     BOOST_LOG_TRIVIAL(error) << "UDP get address info error: " << strerror(errno);
     throw strerror(errno);
@@ -36,28 +36,28 @@ UDPSocket::~UDPSocket(){
 void
 UDPSocket::bind(){
   struct addrinfo *rp;
-  for(rp = m_results; rp != NULL; rp = rp->ai_next){
-    m_socketFd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-    if(m_socketFd == -1)
+  for(rp = results_; rp != NULL; rp = rp->ai_next){
+    socketFd_ = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if(socketFd_ == -1)
       continue;
-    if(::bind(m_socketFd, rp->ai_addr, rp->ai_addrlen) == 0)
+    if(::bind(socketFd_, rp->ai_addr, rp->ai_addrlen) == 0)
       break;
-    ::close(m_socketFd);
+    ::close(socketFd_);
   }
-  freeaddrinfo(m_results);
+  freeaddrinfo(results_);
 }
 
 void
 UDPSocket::connect(){
   struct addrinfo *rp;
-  for(rp = m_results; rp != NULL; rp = rp->ai_next){
-    m_socketFd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-    if(m_socketFd == -1)
+  for(rp = results_; rp != NULL; rp = rp->ai_next){
+    socketFd_ = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if(socketFd_ == -1)
       continue;
-    if(::connect(m_socketFd, rp->ai_addr, rp->ai_addrlen) == 0)
+    if(::connect(socketFd_, rp->ai_addr, rp->ai_addrlen) == 0)
       break;
   }
-  freeaddrinfo(m_results);
+  freeaddrinfo(results_);
 }
 
 int
@@ -67,7 +67,7 @@ UDPSocket::receive(string& message, int max_size, int timeout){
   memset(pdfs, 0, sizeof(pdfs));
 
   if(timeout >= 0) { // Default is -1
-    pdfs[0].fd = m_socketFd;
+    pdfs[0].fd = socketFd_;
     pdfs[0].events = POLLIN;
     poll(pdfs, 1, timeout);
     if((pdfs[0].revents & POLLIN) == 0){
@@ -77,7 +77,7 @@ UDPSocket::receive(string& message, int max_size, int timeout){
   // We are here because we have received a datagram
   char *msg = new char[max_size];
   memset(msg, 0, max_size);
-  msg_length = recv(m_socketFd, msg, max_size, 0);
+  msg_length = recv(socketFd_, msg, max_size, 0);
   if(msg_length < 0){
     BOOST_LOG_TRIVIAL(error) << "UDP recv error: " << strerror(errno);
     throw strerror(errno);
@@ -90,15 +90,15 @@ UDPSocket::receive(string& message, int max_size, int timeout){
 
 void
 UDPSocket::close(){
-  if(m_socketFd != -1){
-    ::close(m_socketFd);
-    m_socketFd = -1;
+  if(socketFd_ != -1){
+    ::close(socketFd_);
+    socketFd_ = -1;
   }
 }
 
 void
 UDPSocket::send(string message){
-  if(::send(m_socketFd, message.c_str(), message.length(), 0) < 0){
+  if(::send(socketFd_, message.c_str(), message.length(), 0) < 0){
     BOOST_LOG_TRIVIAL(error) << "UDP send error: " << strerror(errno);
     throw strerror(errno);
   }

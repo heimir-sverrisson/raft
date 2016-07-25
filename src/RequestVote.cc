@@ -8,51 +8,51 @@
 using namespace rapidjson;
 
 RequestVote::RequestVote()
-  : m_allocator(m_d.GetAllocator())
+  : allocator_(d_.GetAllocator())
 {
-  m_term = 0;
-  m_candidateId = 0;
-  m_lastLogIndex = 0;
-  m_lastLogTerm = 0;
-  m_o = Value(kObjectType);
+  term_ = 0;
+  candidateId_ = 0;
+  lastLogIndex_ = 0;
+  lastLogTerm_ = 0;
+  o_ = Value(kObjectType);
 
-  addInt(m_o, "term", m_term);
-  addInt(m_o, "candidateId", m_candidateId);
-  addInt(m_o, "lastLogIndex", m_lastLogIndex);
-  addInt(m_o, "lastLogTerm", m_lastLogTerm);
+  addInt(o_, "term", term_);
+  addInt(o_, "candidateId", candidateId_);
+  addInt(o_, "lastLogIndex", lastLogIndex_);
+  addInt(o_, "lastLogTerm", lastLogTerm_);
 }
 
 RequestVote::RequestVote(const RequestVote& cpy)
-  : m_allocator(m_d.GetAllocator())
+  : allocator_(d_.GetAllocator())
 {
-  m_term = cpy.m_term;
-  m_candidateId = cpy.m_candidateId;
-  m_lastLogIndex = cpy.m_lastLogIndex;
-  m_lastLogTerm = cpy.m_lastLogTerm;
-  m_d.CopyFrom(cpy.m_d, m_allocator);
-  m_o.CopyFrom(cpy.m_o, m_allocator);
+  term_ = cpy.term_;
+  candidateId_ = cpy.candidateId_;
+  lastLogIndex_ = cpy.lastLogIndex_;
+  lastLogTerm_ = cpy.lastLogTerm_;
+  d_.CopyFrom(cpy.d_, allocator_);
+  o_.CopyFrom(cpy.o_, allocator_);
 }
 
 RequestVote::RequestVote(int term, int candidateId, int lastLogIndex, int lastLogTerm)
-  : m_allocator(m_d.GetAllocator())
+  : allocator_(d_.GetAllocator())
 {
-  m_term = term;
-  m_candidateId = candidateId;
-  m_lastLogIndex = lastLogIndex;
-  m_lastLogTerm = lastLogTerm;
-  m_o = Value(kObjectType);
+  term_ = term;
+  candidateId_ = candidateId;
+  lastLogIndex_ = lastLogIndex;
+  lastLogTerm_ = lastLogTerm;
+  o_ = Value(kObjectType);
 
-  addInt(m_o, "term", term);
-  addInt(m_o, "candidateId", candidateId);
-  addInt(m_o, "lastLogIndex", lastLogIndex);
-  addInt(m_o, "lastLogTerm", lastLogTerm);
+  addInt(o_, "term", term);
+  addInt(o_, "candidateId", candidateId);
+  addInt(o_, "lastLogIndex", lastLogIndex);
+  addInt(o_, "lastLogTerm", lastLogTerm);
 }
 
 void
 RequestVote::addInt(Value& o, const char *key, int value){
-  Value k(key, m_allocator);
+  Value k(key, allocator_);
   Value v(value);
-  o.AddMember(k, v, m_allocator);
+  o.AddMember(k, v, allocator_);
 }
 
 std::string
@@ -60,7 +60,7 @@ RequestVote::to_string(){
   std::string str;
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
-  m_o.Accept(writer);
+  o_.Accept(writer);
   str = buffer.GetString();
   return str;
 }
@@ -75,20 +75,20 @@ RequestVote::parse_json(std::string json){
     return;
   }
   BOOST_LOG_TRIVIAL(info) << "RequestVote: " << json;
-  m_o = Value(kObjectType);
+  o_ = Value(kObjectType);
   Value& v_term = d["term"];
-  m_term = v_term.GetInt();
-  m_o.AddMember("term",v_term, m_allocator);
+  term_ = v_term.GetInt();
+  o_.AddMember("term",v_term, allocator_);
 
   Value& v_candidateId = d["candidateId"];
-  m_candidateId = v_candidateId.GetInt();
-  m_o.AddMember("candidateId",v_candidateId, m_allocator);
+  candidateId_ = v_candidateId.GetInt();
+  o_.AddMember("candidateId",v_candidateId, allocator_);
 
   Value& v_lastLogIndex = d["lastLogIndex"];
-  m_lastLogIndex = v_lastLogIndex.GetInt();
-  m_o.AddMember("lastLogIndex",v_lastLogIndex, m_allocator);
+  lastLogIndex_ = v_lastLogIndex.GetInt();
+  o_.AddMember("lastLogIndex",v_lastLogIndex, allocator_);
 
   Value& v_lastLogTerm = d["lastLogTerm"];
-  m_lastLogTerm = v_lastLogTerm.GetInt();
-  m_o.AddMember("lastLogTerm",v_lastLogTerm, m_allocator);
+  lastLogTerm_ = v_lastLogTerm.GetInt();
+  o_.AddMember("lastLogTerm",v_lastLogTerm, allocator_);
 }

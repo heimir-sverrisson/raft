@@ -10,47 +10,47 @@ class Queue{
  public:
  
   T pop(){
-    unique_lock<mutex> mlock(m_mutex);
-    while (m_queue.empty()){
-      m_cond.wait(mlock);
+    unique_lock<mutex> mlock(mutex_);
+    while (queue_.empty()){
+      cond_.wait(mlock);
     }
-    auto item = m_queue.front();
-    m_queue.pop();
+    auto item = queue_.front();
+    queue_.pop();
     return item;
   }
  
   void pop(T& item){
-    unique_lock<mutex> mlock(m_mutex);
-    while (m_queue.empty()){
-      m_cond.wait(mlock);
+    unique_lock<mutex> mlock(mutex_);
+    while (queue_.empty()){
+      cond_.wait(mlock);
     }
-    item = m_queue.front();
-    m_queue.pop();
+    item = queue_.front();
+    queue_.pop();
   }
  
   void push(const T& item){
-    unique_lock<mutex> mlock(m_mutex);
-    m_queue.push(item);
+    unique_lock<mutex> mlock(mutex_);
+    queue_.push(item);
     mlock.unlock();
-    m_cond.notify_one();
+    cond_.notify_one();
   }
  
   void push(T&& item){
-    unique_lock<mutex> mlock(m_mutex);
-    m_queue.push(move(item));
+    unique_lock<mutex> mlock(mutex_);
+    queue_.push(move(item));
     mlock.unlock();
-    m_cond.notify_one();
+    cond_.notify_one();
   }
 
   int size(){
-    unique_lock<mutex> mlock(m_mutex);
-    int s = m_queue.size();
+    unique_lock<mutex> mlock(mutex_);
+    int s = queue_.size();
     mlock.unlock();
     return s;
   }
  
  private:
-  queue<T> m_queue;
-  mutex m_mutex;
-  condition_variable m_cond;
+  queue<T> queue_;
+  mutex mutex_;
+  condition_variable cond_;
 };

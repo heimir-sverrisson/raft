@@ -15,9 +15,9 @@ class VoteCollector{
     bool isElected();
     void clearVotes();
   private:
-    int m_hostCount;
-    unordered_set<int> m_ids;
-    unordered_set<int> m_votes;
+    int hostCount_;
+    unordered_set<int> ids_;
+    unordered_set<int> votes_;
 };
 
 #endif

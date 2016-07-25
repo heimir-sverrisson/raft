@@ -12,9 +12,9 @@ class Raft{
     Raft(string configFile, int myId);
     void run();
   private:
-    ServerState m_ss;  
-    Receiver m_r;
-    thread m_rcv;
+    ServerState ss_;  
+    Receiver r_;
+    thread rcv_;
     void receiveWorker();
 };
 

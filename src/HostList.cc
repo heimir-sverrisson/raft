@@ -30,7 +30,7 @@ HostList::HostList(string filename, int myId){
     hostIndices.push_back(hostIndex);
     HostEntry h(hostIndex, rec[1], rec[2]);
     BOOST_LOG_TRIVIAL(info) << h.to_string();
-    m_hosts.push_back(h);
+    hosts_.push_back(h);
   }
   BOOST_LOG_TRIVIAL(info) << "End of host list";
   // Check if myId is an index in the file
@@ -45,7 +45,7 @@ HostEntry
 HostList::getHostById(int id){
   int theId = -1;
   HostEntry he(0,"","");
-  for(auto& h : m_hosts){
+  for(auto& h : hosts_){
     if(h.getNodeId() == id){
       theId = h.getNodeId();
       he = h;
