@@ -65,7 +65,7 @@ AppendEntries::addInt(Value& o, const char *key, int value){
 }
 
 std::string
-AppendEntries::to_string(){
+AppendEntries::to_string() const{
   std::string str;
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);
@@ -75,7 +75,7 @@ AppendEntries::to_string(){
 }
 
 std::string
-AppendEntries::get_entries(){
+AppendEntries::get_entries() const{
   std::string str;
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);

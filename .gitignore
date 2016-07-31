@@ -3,3 +3,5 @@ bin
 **/*.swp
 **/*.log
 **/*.d
+.vscode
+graph

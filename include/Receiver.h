@@ -2,19 +2,13 @@
 #define Receiver_h
 
 #include <Queue.h>
-#include <AppendEntries.h>
-#include <RequestVote.h>
-#include <VoteResponse.h>
 #include <HostEntry.h>
+#include <MessageContent.h>
 #include <UDPSocket.h>
 #include <mutex>
 #include <condition_variable>
 
 using namespace std;
-
-enum MessageType {
-  unknown, client, appendEntries, requestVote, voteResponse
-};
 
 enum WakeupType {
   notRunning, timedOut, gotMessage
@@ -23,10 +17,8 @@ enum WakeupType {
 class Receiver{
   public:
     Receiver(HostEntry host);
-    int getCount(MessageType mType);
-    AppendEntries getAppendEntries();
-    RequestVote getRequestVote();
-    VoteResponse getVoteResponse();
+    int getCount();
+    MessageContent getMessage();
     void run();
     void stop();
     bool isRunning();
@@ -36,9 +28,7 @@ class Receiver{
     UDPSocket sock_;
     bool run_;
     bool isReady_;
-    Queue<AppendEntries> AppendEntriesQueue_;
-    Queue<RequestVote> RequestVoteQueue_;
-    Queue<VoteResponse> VoteResponseQueue_;
+    Queue<MessageContent> MessageContentQueue_;
     int split(string& str, MessageType& mType, string& json);
     void setRun(bool s);
     mutex mtx_;

@@ -10,14 +10,33 @@ The following things are starting to work:
 * UDP client and server sockets
 * Multi-threading
 * JSON generation and parsing
+* Election
+* Finate State Machine (FSM) for protocol
 
 ##Installation on Rasperry Pi
+Install the Raspian OS if not there already. Using a HDMI monitor and USB keyboard/mouse.
+
+Set the hostname:
+* Edit `/etc/hostname` and replace `raspberrypi`with your own choice, i.e. `pi-3-[abcdef]`
+* Edit `/etc/hosts` the same way for address 
+* Setup Wifi if needed
+Reboot here and ssh into the new node as HDMI is not useful from now on.
+
+Update the OS:
+* `sudo apt-get update`
+* `sudo apt-get dist-upgrade`
+
 Install the `boost` library
 * `sudo apt-get install libboost1.55-all`
+
 
 Install Cmake
 * `sudo apt-get install cmake`
 
+Make `/usr/local/src` owned by the user `pi`
+* `cd /usr/local`
+* `sudo chown -R pi:pi src`
+*`cd src`
 Get `rapidjson` from Github
 * `git clone https://github.com/miloyip/rapidjson.git`
 

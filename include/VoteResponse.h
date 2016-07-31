@@ -1,10 +1,11 @@
 #ifndef VoteResponse_h
 #define VoteResponse_h
 
+#include <RaftMessage.h>
 #include <rapidjson/document.h>
 #include <string>
 
-class VoteResponse {
+class VoteResponse : public virtual RaftMessage {
   public:
     VoteResponse();
     VoteResponse(const VoteResponse&);

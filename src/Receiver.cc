@@ -36,38 +36,16 @@ Receiver::run(){
   while(isRunning()) {
     string str;
     int ret = sock_.receive(str, Config::maxMessageSize, 2000);
-    if(ret < 0) // Handle timeout
+    if(ret < 0) // Handle timeout - only here to force stop
       continue;
     MessageType mType;
     string json;
     ret = split(str, mType, json);
     if(ret == 0){
-      switch(mType){
-        case appendEntries:
-          {
-            AppendEntries ae;
-            ae.parse_json(json);
-            AppendEntriesQueue_.push(ae);
-          }
-          break;
-        case requestVote:
-          {
-            RequestVote rv;
-            rv.parse_json(json);
-            RequestVoteQueue_.push(rv);
-          }
-          break;
-        case voteResponse:
-          {
-            VoteResponse vr;
-            vr.parse_json(json);
-            VoteResponseQueue_.push(vr);
-          }
-          break;
-        case client:
-        default:
-          BOOST_LOG_TRIVIAL(error) << "Unknown MessageType: " << str;
-      }
+      MessageContent mc;
+      mc.messageType = mType;
+      mc.json = json;
+      MessageContentQueue_.push(mc);
       // Set condition if we got a message
       {
         unique_lock<mutex> lk(mtx_);
@@ -84,9 +62,7 @@ Receiver::run(){
 
 WakeupType
 Receiver::waitForMessage(int timeout){
-  if(AppendEntriesQueue_.size() > 0 ||
-     RequestVoteQueue_.size() > 0   ||
-     VoteResponseQueue_.size() > 0){
+  if(MessageContentQueue_.size() > 0 ){
     return gotMessage;
   }
   if(!isRunning()){
@@ -116,34 +92,11 @@ Receiver::split(string& str, MessageType& mType, string& json){
 }
 
 int
-Receiver::getCount(MessageType mType){
-  switch(mType){
-    case appendEntries:
-      return AppendEntriesQueue_.size();
-    case requestVote:
-      return RequestVoteQueue_.size();
-    case voteResponse:
-      return VoteResponseQueue_.size();
-    case client:
-      return 0;
-    default:
-      string str = "Illegal MessageType: " + to_string(mType);
-      BOOST_LOG_TRIVIAL(error) << str;
-      return 0;
-  }
+Receiver::getCount(){
+  return MessageContentQueue_.size();
 }
 
-AppendEntries
-Receiver::getAppendEntries(){
-  return AppendEntriesQueue_.pop();
-}
-
-RequestVote
-Receiver::getRequestVote(){
-  return RequestVoteQueue_.pop();
-}
-
-VoteResponse
-Receiver::getVoteResponse(){
-  return VoteResponseQueue_.pop();
+MessageContent
+Receiver::getMessage(){
+  return MessageContentQueue_.pop();
 }

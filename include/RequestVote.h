@@ -1,10 +1,11 @@
 #ifndef RequestVote_h
 #define RequestVote_h
 
+#include <RaftMessage.h>
 #include <rapidjson/document.h>
 #include <string>
 
-class RequestVote {
+class RequestVote : public virtual RaftMessage {
   public:
     RequestVote();
     RequestVote(const RequestVote&);

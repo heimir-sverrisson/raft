@@ -11,6 +11,9 @@ DEP=$(SRC:%.cc=%.d)
 
 all: $(BIN)
 
+RaftProtocol: RaftProtocol.o Receiver.o UDPSocket.o AppendEntries.o raft_util.o RequestVote.o VoteResponse.o
+	$(CXX) $(LDLIBS) $^ -o $@
+
 $(BIN): $(OBJ)
 	$(CXX) $(LDLIBS) $^ -o $@
 
