@@ -5,7 +5,7 @@
 namespace raft_fsm {
 
     void run(Receiver& r, ServerState& ss){
-        raftProtocol rp(boost::ref(r), boost::ref(ss));
+        RaftProtocol rp(boost::ref(r), boost::ref(ss));
         rp.start();
         while(true){
             BOOST_LOG_TRIVIAL(info) << "Timeout is: " << rp.getTimeout();

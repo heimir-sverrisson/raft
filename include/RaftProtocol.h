@@ -26,11 +26,17 @@ namespace raft_fsm {
         AppendEntries ae_;
     };
     struct GotRequestVote {};
+    struct Completed{
+        enum Result{ok,noGood};
+    };
 
-    struct raftProtocol_ : public msm::front::state_machine_def<raftProtocol_>
+    struct RaftProtocol_ : public msm::front::state_machine_def<RaftProtocol_>
     {
-        raftProtocol_(Receiver& r, ServerState& ss) : 
+        typedef RaftProtocol_ rp; // Shorthand for table
+
+        RaftProtocol_(Receiver& r, ServerState& ss) : 
             timeout_(Config::readPeriod), r_(r), ss_(ss){};
+      
         template<class Event, class FSM>
         void on_entry(Event const& evt, FSM& fsm){
             BOOST_LOG_TRIVIAL(info) << "Entering the raftProtocol state machine";
@@ -45,42 +51,100 @@ namespace raft_fsm {
         struct Follower : public msm::front::state<> 
         {
             template<class Event, class FSM>
+            void on_entry(Event const& evt, FSM& fsm){
+                BOOST_LOG_TRIVIAL(info) << "Entering the Follower state";
+                fsm.timeout_ = Config::readPeriod;
+            }
+            template<class Event, class FSM>
             void on_exit(Event const& timeout, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Exiting Follower";
-                int tMin = Config::readPeriod/2;
-                int t = tMin + rand() % tMin;
-                fsm.setTimeout(t);
             }            
         };
 
-        struct Candidate : public msm::front::state<> 
+        // This State in the main FSM is an inner FSM itself
+        struct Candidate_ : public msm::front::state_machine_def<Candidate_>
         {
+            typedef Candidate_ cd; // Shorten transition table entries
+      
             template<class Event, class FSM>
             void on_entry(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Entering Candidate";
+                // The fsm here is the main fsm
+                // Copy our data members
+                ssp_ = &fsm.ss_;
+                int tMin = Config::readPeriod/2;
+                int t = tMin + rand() % tMin;
+                fsm.timeout_ = t;
             }
+      
             template<class Event, class FSM>
             void on_exit(Event const& evt, FSM& fsm){
-                fsm.setTimeout(Config::readPeriod);
+                // fsm.setTimeout(Config::readPeriod);
                 BOOST_LOG_TRIVIAL(info) << "Exiting Candidate";
             }
+            // Substates
+            struct SetRandomTimeout : public msm::front::state<>
+            {
+                template <class Event,class Fsm>
+                void on_entry(Event const&, Fsm&) const {
+                    BOOST_LOG_TRIVIAL(info) << "Entering SetRandomTimeout";
+                }
+                template <class Event,class Fsm>
+                void on_exit(Event const&, Fsm&) const {
+                    BOOST_LOG_TRIVIAL(info) << "Exiting SetRandomTimeout";
+                }
+            };
+            struct WaitForVoteResponse : public msm::front::state<>
+            {
+                template <class Event,class Fsm>
+                void on_entry(Event const&, Fsm& fsm) const {
+                    BOOST_LOG_TRIVIAL(info) << "Entering WaitForVoteResponse";
+                }
+                template <class Event,class Fsm>
+                void on_exit(Event const&, Fsm&) const {
+                    BOOST_LOG_TRIVIAL(info) << "Exiting WaitForVoteResponse";
+                }
+            };
+            struct ExitCandidate : msm::front::exit_pseudo_state<Completed> {};
+
+            // Transition actions
+            void startElections(const Timeout& t){
+                BOOST_LOG_TRIVIAL(info) << "Starting elections!";
+                Sender s;
+                s.sendRequestVote(*ssp_);
+            }
+            void takeLeadership(const GotVoteResponse& vr){
+                BOOST_LOG_TRIVIAL(info) << "Taking leadership?";
+            }
+            // Guard conditions
+            bool gotEnoughVotes(const GotVoteResponse& vr){
+               BOOST_LOG_TRIVIAL(info) << "Enough votes";
+               return false; 
+            }
+            typedef SetRandomTimeout initial_state;
+            struct transition_table : mpl::vector<
+                //     Start,               Event,           Next,                Action,                 Guard
+                a_row <SetRandomTimeout,    Timeout,         WaitForVoteResponse, &cd::startElections>,
+                 _row <WaitForVoteResponse, Timeout,         SetRandomTimeout>,
+                  row <WaitForVoteResponse, GotVoteResponse, ExitCandidate,       &cd::takeLeadership,  &cd::gotEnoughVotes >
+            > {};
+
+            // Local data
+            ServerState* ssp_;
         };
+        typedef msm::back::state_machine<Candidate_> Candidate;
+        
         struct Leader : public msm::front::state<> {
             template<class Event, class FSM>
             void on_entry(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Entering Leader";
+                fsm.timeout_ = Config::readPeriod;
             }
 
         };
 
         typedef Follower initial_state;
 
-        // Transition actions
-        void startElections(const Timeout& t){
-            BOOST_LOG_TRIVIAL(info) << "Starting elections!";
-            Sender s;
-            s.sendRequestVote(ss_);
-        }
         void giveUpLeadership(const GotAppendEntries& evt){
             // Safe to lose this message if I'm not the leader 
             BOOST_LOG_TRIVIAL(info) << "Somebody send me AppendEntries - but I'm the leader";
@@ -103,12 +167,11 @@ namespace raft_fsm {
 
         bool votedForMe(const GotVoteResponse& evt) { return true;}
 
-        typedef raftProtocol_ rp; // Shorthand for table
         // Transition Table for protocol
         // DO NOT RENAME THIS VARIABLE !!!
         struct transition_table : mpl::vector<
             //     Start,     Event,            Next,      Action,                         Guard
-            a_row <Follower,  Timeout,          Candidate, &rp::startElections>,
+             _row <Follower,  Timeout,          Candidate>,
              _row <Candidate, Timeout,          Leader>,
               row <Leader,    GotAppendEntries, Follower,  &rp::giveUpLeadership,  &rp::isHisTermHigher >
         > {};
@@ -123,16 +186,15 @@ namespace raft_fsm {
 
         inline int getTimeout() {return timeout_;}
         inline void setTimeout(int timeout) {timeout_ = timeout;}
-
-        private:
-            int timeout_;
-            Receiver& r_;
-            ServerState ss_;
-
+        
+        // State variables
+        int timeout_;
+        Receiver& r_;
+        ServerState& ss_;
     };
 
     // Pick a backend
-    typedef msm::back::state_machine<raftProtocol_> raftProtocol;
+    typedef msm::back::state_machine<RaftProtocol_> RaftProtocol;
     // Declare the run() method for the FSM
     void run(Receiver& r, ServerState& ss);
 
