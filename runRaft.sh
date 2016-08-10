@@ -12,4 +12,4 @@
 char=$(hostname | awk -F'-' '{print "\047" $NF}')
 char_ord=$(printf '%d' $char)
 id=$(echo $char_ord | awk '{ print ($0 - 96);}')
-bin/raft clusterlist.txt $id
+bin/raft clusterlist.txt $id &

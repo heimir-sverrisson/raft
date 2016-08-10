@@ -250,7 +250,7 @@ namespace raft_fsm {
             int hisTerm = evt.ae_.getTerm();
             int myTerm = ss_.getTerm();
             if(myTerm != hisTerm ){
-                BOOST_LOG_TRIVIAL(error) << "myterm: " << myTerm << ", hisTerm: " << hisTerm;
+                BOOST_LOG_TRIVIAL(error) << "myTerm: " << myTerm << ", hisTerm: " << hisTerm;
                 if(myTerm == 0){
                     ss_.setTerm(hisTerm);   // Initial condition
                 }

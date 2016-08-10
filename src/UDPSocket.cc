@@ -16,7 +16,7 @@ UDPSocket::UDPSocket(string server_name, string service, SocketType socketType){
   int rv = getaddrinfo(server_name.c_str(), service.c_str(), 
                                         &hints, &results_);
   if(rv != 0){
-    BOOST_LOG_TRIVIAL(error) << "UDP get address info error: " << strerror(errno);
+    BOOST_LOG_TRIVIAL(error) << "UDP get address info error: " << rv << ", " << strerror(errno);
     throw strerror(errno);
   }
   switch(socketType){
