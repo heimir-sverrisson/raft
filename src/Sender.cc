@@ -3,6 +3,7 @@
 #include <boost/log/trivial.hpp>
 #include <UDPSocket.h>
 #include <Receiver.h>
+#include <AppendResponse.h>
 
 void
 Sender::sendVoteResponse(ServerState& ss, int candidateId, int vote){
@@ -12,6 +13,18 @@ Sender::sendVoteResponse(ServerState& ss, int candidateId, int vote){
   UDPSocket sock(h.getHost(), h.getService(), clientSocket);
   VoteResponse vr(ss.getMyId(), ss.getTerm(), vote);
   string s = to_string(MessageType::voteResponse) + sep + vr.to_string();
+  sock.send(s);
+  sock.close();
+}
+
+void
+Sender::sendAppendResponse(ServerState& ss, int leaderId, int success){
+  char sep = Config::messageSeparator;
+  BOOST_LOG_TRIVIAL(info) << "Sender: Sending AppendResponse";
+  HostEntry h = ss.getHostList().getHostById(leaderId);
+  UDPSocket sock(h.getHost(), h.getService(), clientSocket);
+  AppendResponse ar(ss.getMyId(), ss.getTerm(), success);
+  string s = to_string(MessageType::appendResponse) + sep + ar.to_string();
   sock.send(s);
   sock.close();
 }

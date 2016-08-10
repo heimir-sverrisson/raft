@@ -48,6 +48,14 @@ namespace raft_fsm {
                             rp.process_event(GotVoteResponse(vr));
                         }
                         break;
+                        case appendResponse:
+                        {
+                            AppendResponse ar;
+                            ar.parse_json(m.json);
+                            BOOST_LOG_TRIVIAL(info) << "Got AppendResponse";
+                            rp.process_event(GotAppendResponse(ar));
+                        }
+                        break;
                         case client:
                         default:
                         BOOST_LOG_TRIVIAL(error) << "Unknown MessageType: " << m.messageType;

@@ -7,6 +7,7 @@
 #include <Config.h>
 #include <Receiver.h>
 #include <ServerState.h>
+#include <AppendResponse.h>
 #include <Sender.h>
 #include <raft_util.h>
 
@@ -16,11 +17,13 @@ namespace mpl = boost::mpl;
 namespace raft_fsm {
     // Events
     struct Timeout {};
-    struct HeardServerWithHigherTerm {};
-    struct GotMajorityVote {};
     struct GotVoteResponse {
         GotVoteResponse(VoteResponse vr) : vr_(vr){};
         VoteResponse vr_;
+    };
+    struct GotAppendResponse {
+        GotAppendResponse(AppendResponse ar) : ar_(ar){};
+        AppendResponse ar_;
     };
     struct GotAppendEntries {
         GotAppendEntries(AppendEntries ae) : ae_(ae){};
@@ -240,8 +243,25 @@ namespace raft_fsm {
             Sender s;
             s.sendAppendEntries(ss_);
         }
-        void processAppendentries(const GotAppendEntries& evt){
+
+        void processAppendEntries(const GotAppendEntries& evt){
             BOOST_LOG_TRIVIAL(info) << "AppendEntries: " << evt.ae_.to_string();
+            int myLeader = evt.ae_.getLeaderId();
+            int hisTerm = evt.ae_.getTerm();
+            int myTerm = ss_.getTerm();
+            if(myTerm != hisTerm ){
+                BOOST_LOG_TRIVIAL(error) << "myterm: " << myTerm << ", hisTerm: " << hisTerm;
+                if(myTerm == 0){
+                    ss_.setTerm(hisTerm);   // Initial condition
+                }
+            }
+            Sender s;
+            s.sendAppendResponse(ss_, myLeader, 1); //ToDO: compute success correctly
+        }
+
+        void processAppendResponse(const GotAppendResponse& evt){
+            BOOST_LOG_TRIVIAL(info) << "AppendResponse: " << evt.ar_.to_string();
+            //TODO: Move the state of an entry to committed when majority is reached
         }
 
         void sendMyVote(const GotRequestVote& evt){
@@ -257,8 +277,6 @@ namespace raft_fsm {
                 s.sendVoteResponse(ss_, candidateId, 0);
             }
         }
-
-        void setMyTerm(const HeardServerWithHigherTerm&) {}
 
         // Guard conditions
         bool isHisTermHigher(const GotAppendEntries& evt){
@@ -290,14 +308,15 @@ namespace raft_fsm {
         // Transition Table for protocol main state machine
         // DO NOT RENAME THIS VARIABLE !!!
         struct transition_table : mpl::vector<
-            //     Start,                      Event,            Next,      Action,                 Guard
-             _row <Follower,                   Timeout,          Candidate >,
-            a_row <Follower,                   GotRequestVote,   Follower,  &rp::sendMyVote >,
-            a_row <Follower,                   GotAppendEntries, Follower,  &rp::processAppendentries >,
-              row <Candidate,                  GotAppendEntries, Follower,  &rp::stopElections,     &rp::isHisTermHigher >,
-              row <Leader,                     GotAppendEntries, Follower,  &rp::giveUpLeadership,  &rp::isHisTermHigher >,
-              row <Leader,                     GotRequestVote,   Follower,  &rp::sendMyVote,        &rp::isHisTermHigher >,
-            a_row <Leader,                     Timeout,          Leader,    &rp::sendHeartbeat >,
+            //     Start,                      Event,             Next,      Action,                 Guard
+             _row <Follower,                   Timeout,           Candidate >,
+            a_row <Follower,                   GotRequestVote,    Follower,  &rp::sendMyVote >,
+            a_row <Follower,                   GotAppendEntries,  Follower,  &rp::processAppendEntries >,
+              row <Candidate,                  GotAppendEntries,  Follower,  &rp::stopElections,     &rp::isHisTermHigher >,
+              row <Leader,                     GotAppendEntries,  Follower,  &rp::giveUpLeadership,  &rp::isHisTermHigher >,
+              row <Leader,                     GotRequestVote,    Follower,  &rp::sendMyVote,        &rp::isHisTermHigher >,
+            a_row <Leader,                     Timeout,           Leader,    &rp::sendHeartbeat >,
+            a_row <Leader,                     GotAppendResponse, Leader,    &rp::processAppendResponse >,
              _row<Candidate::exit_pt
                  <Candidate_::ExitToFollower>, GotRequestVote,          Follower>,
              _row<Candidate::exit_pt

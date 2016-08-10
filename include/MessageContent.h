@@ -4,7 +4,7 @@
 #include <string>
 
 enum MessageType {
-  unknown, client, appendEntries, requestVote, voteResponse
+  unknown, client, appendEntries, requestVote, voteResponse, appendResponse
 };
 
 struct MessageContent{

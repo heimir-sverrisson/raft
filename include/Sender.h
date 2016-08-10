@@ -13,6 +13,7 @@ class Sender{
     void sendAppendEntries(ServerState& ss);
     void sendRequestVote(ServerState& ss);
     void sendVoteResponse(ServerState& ss, int candidateId, int vote);
+    void sendAppendResponse(ServerState& ss, int leaderId, int success);
 };
 
 #endif
