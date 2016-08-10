@@ -103,7 +103,7 @@ namespace raft_fsm {
             struct ExitToFollower : public msm::front::exit_pseudo_state<GotRequestVote>{
                 template <class Event,class Fsm>
                 void on_entry(Event const&, Fsm& fsm) const {
-                    BOOST_LOG_TRIVIAL(info) << "ExitToFollower";
+                    BOOST_LOG_TRIVIAL(info) << "Entering ExitToFollower";
                 }
                 template <class Event,class Fsm>
                 void on_exit(Event const&, Fsm&) const {
@@ -154,12 +154,10 @@ namespace raft_fsm {
 
             // Guard conditions
             bool gotEnoughVotes(const GotVoteResponse& vr){
-               BOOST_LOG_TRIVIAL(info) << "Enough votes?";
                VoteCollector& vc = ssp_->getVoteCollector();
                int vote = vr.vr_.getVoteGranted();
                 if( vote == 1){
                     vc.storeVote(vr.vr_.getNodeId());
-                    BOOST_LOG_TRIVIAL(info) << "Got a vote";
                 }
                return vc.isElected(); 
             }
@@ -231,7 +229,11 @@ namespace raft_fsm {
         // Action
         void giveUpLeadership(const GotAppendEntries& evt){
             // Safe to lose this message if I'm not the leader 
-            BOOST_LOG_TRIVIAL(info) << "Somebody send me AppendEntries - but I'm the leader";
+            BOOST_LOG_TRIVIAL(error) << "Somebody send me AppendEntries - but I thought I was the leader";
+        }
+        void stopElections(const GotAppendEntries& evt){
+            // Safe to lose this message if we are in the middle of elections
+            BOOST_LOG_TRIVIAL(error) << "Somebody sent me AppendEntries - aborting elections";
         }
 
         void sendHeartbeat(const Timeout& evt){
@@ -292,7 +294,7 @@ namespace raft_fsm {
              _row <Follower,                   Timeout,          Candidate >,
             a_row <Follower,                   GotRequestVote,   Follower,  &rp::sendMyVote >,
             a_row <Follower,                   GotAppendEntries, Follower,  &rp::processAppendentries >,
-             _row <Candidate,                  Timeout,          Leader >,
+              row <Candidate,                  GotAppendEntries, Follower,  &rp::stopElections,     &rp::isHisTermHigher >,
               row <Leader,                     GotAppendEntries, Follower,  &rp::giveUpLeadership,  &rp::isHisTermHigher >,
               row <Leader,                     GotRequestVote,   Follower,  &rp::sendMyVote,        &rp::isHisTermHigher >,
             a_row <Leader,                     Timeout,          Leader,    &rp::sendHeartbeat >,

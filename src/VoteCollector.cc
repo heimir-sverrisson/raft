@@ -19,7 +19,7 @@ VoteCollector::storeVote(int id){
   // Check if id is there already!
   if(votes_.find(id) == votes_.end()){
     votes_.insert(id);
-    BOOST_LOG_TRIVIAL(error) << "NodeId " << id << " voted for me";
+    BOOST_LOG_TRIVIAL(info) << "NodeId " << id << " voted for me";
   } else {
     BOOST_LOG_TRIVIAL(info) << "NodeId " << id << " already exists!";
   }
