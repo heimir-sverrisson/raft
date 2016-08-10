@@ -11,10 +11,11 @@ class VoteResponse : public virtual RaftMessage {
     VoteResponse(const VoteResponse&);
     VoteResponse(int nodeId, int term, int voteGranted);
     void parse_json(std::string json);
-    std::string to_string();
-    inline int getNodeId(){ return nodeId_; };
-    inline int getTerm(){ return term_; };
-    inline int getVoteGranted(){ return voteGranted_; };
+    std::string to_string() const;
+    inline int getNodeId() const { return nodeId_; };
+    inline int getTerm() const { return term_; };
+    inline int getVoteGranted() const { return voteGranted_; };
+    inline void setVoteGranted(int voteGranted){ voteGranted_ = voteGranted; };
   private:
     void addInt(rapidjson::Value& o, const char *key, int value);
     rapidjson::Document d_;

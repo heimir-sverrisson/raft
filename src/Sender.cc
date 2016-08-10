@@ -5,10 +5,10 @@
 #include <Receiver.h>
 
 void
-Sender::sendVoteResponse(ServerState& ss, int nodeId, int vote){
+Sender::sendVoteResponse(ServerState& ss, int candidateId, int vote){
   char sep = Config::messageSeparator;
   BOOST_LOG_TRIVIAL(info) << "Sender: Sending VoteResponse";
-  HostEntry h = ss.getHostList().getHostById(nodeId);
+  HostEntry h = ss.getHostList().getHostById(candidateId);
   UDPSocket sock(h.getHost(), h.getService(), clientSocket);
   VoteResponse vr(ss.getMyId(), ss.getTerm(), vote);
   string s = to_string(MessageType::voteResponse) + sep + vr.to_string();

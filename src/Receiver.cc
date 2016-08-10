@@ -8,7 +8,7 @@
 
 Receiver::Receiver(HostEntry host)
   : host_(host),
-  sock_(host.getHost(), host.getService(), SocketType::serverSocket),
+  sock_(host.getListenAddress(), host.getService(), SocketType::serverSocket),
   run_(false), isReady_(false)
 {}
 

@@ -10,8 +10,6 @@
 #include <Sender.h>
 #include <raft_util.h>
 
-#include <iostream>
-
 namespace msm = boost::msm;
 namespace mpl = boost::mpl;
 
@@ -20,16 +18,23 @@ namespace raft_fsm {
     struct Timeout {};
     struct HeardServerWithHigherTerm {};
     struct GotMajorityVote {};
-    struct GotVoteResponse {};
+    struct GotVoteResponse {
+        GotVoteResponse(VoteResponse vr) : vr_(vr){};
+        VoteResponse vr_;
+    };
     struct GotAppendEntries {
         GotAppendEntries(AppendEntries ae) : ae_(ae){};
         AppendEntries ae_;
     };
-    struct GotRequestVote {};
+    struct GotRequestVote {
+        GotRequestVote(RequestVote rv) : rv_(rv){};
+        RequestVote rv_;
+    };
     struct Completed{
         enum Result{ok,noGood};
     };
-
+    
+    // Front end for the main protocol state machine
     struct RaftProtocol_ : public msm::front::state_machine_def<RaftProtocol_>
     {
         typedef RaftProtocol_ rp; // Shorthand for table
@@ -47,21 +52,7 @@ namespace raft_fsm {
             BOOST_LOG_TRIVIAL(info) << "Exiting the raftProtocol state machine";
         }
       
-        // States of the FSM
-        struct Follower : public msm::front::state<> 
-        {
-            template<class Event, class FSM>
-            void on_entry(Event const& evt, FSM& fsm){
-                BOOST_LOG_TRIVIAL(info) << "Entering the Follower state";
-                fsm.timeout_ = Config::readPeriod;
-            }
-            template<class Event, class FSM>
-            void on_exit(Event const& timeout, FSM& fsm){
-                BOOST_LOG_TRIVIAL(info) << "Exiting Follower";
-            }            
-        };
-
-        // This State in the main FSM is an inner FSM itself
+        // This State in the main FSM is a submachine itself
         struct Candidate_ : public msm::front::state_machine_def<Candidate_>
         {
             typedef Candidate_ cd; // Shorten transition table entries
@@ -72,22 +63,24 @@ namespace raft_fsm {
                 // The fsm here is the main fsm
                 // Copy our data members
                 ssp_ = &fsm.ss_;
-                int tMin = Config::readPeriod/2;
-                int t = tMin + rand() % tMin;
-                fsm.timeout_ = t;
+                fsmp_ = &fsm;
             }
       
             template<class Event, class FSM>
             void on_exit(Event const& evt, FSM& fsm){
-                // fsm.setTimeout(Config::readPeriod);
+                fsm.timeout_ = Config::readPeriod;
                 BOOST_LOG_TRIVIAL(info) << "Exiting Candidate";
             }
             // Substates
             struct SetRandomTimeout : public msm::front::state<>
             {
                 template <class Event,class Fsm>
-                void on_entry(Event const&, Fsm&) const {
+                void on_entry(Event const&, Fsm& fsm) const {
                     BOOST_LOG_TRIVIAL(info) << "Entering SetRandomTimeout";
+                    // Set the timeout to a random value
+                    int tMin = Config::readPeriod/2;
+                    int t = tMin + rand() % tMin;
+                    (fsm.fsmp_)->timeout_ = t;
                 }
                 template <class Event,class Fsm>
                 void on_exit(Event const&, Fsm&) const {
@@ -105,49 +98,162 @@ namespace raft_fsm {
                     BOOST_LOG_TRIVIAL(info) << "Exiting WaitForVoteResponse";
                 }
             };
-            struct ExitCandidate : msm::front::exit_pseudo_state<Completed> {};
+
+            // Pseudo exit state to Follower
+            struct ExitToFollower : public msm::front::exit_pseudo_state<GotRequestVote>{
+                template <class Event,class Fsm>
+                void on_entry(Event const&, Fsm& fsm) const {
+                    BOOST_LOG_TRIVIAL(info) << "ExitToFollower";
+                }
+                template <class Event,class Fsm>
+                void on_exit(Event const&, Fsm&) const {
+                    BOOST_LOG_TRIVIAL(info) << "Exiting ExitToFollower";
+                }
+            };
+            // Pseudo exit state to Leader
+            struct ExitToLeader : public msm::front::exit_pseudo_state<GotVoteResponse>{
+                template <class Event,class Fsm>
+                void on_entry(Event const&, Fsm& fsm) const {
+                    BOOST_LOG_TRIVIAL(info) << "Entering ExitToLeader";
+                }
+                template <class Event,class Fsm>
+                void on_exit(Event const&, Fsm&) const {
+                    BOOST_LOG_TRIVIAL(info) << "Exiting ExitToLeader";
+                }
+            };
 
             // Transition actions
+            void sendMyVote(const GotRequestVote& evt){
+                int myTerm = ssp_->getTerm();
+                int hisTerm = evt.rv_.getTerm();
+                int candidateId = evt.rv_.getCandidateId();
+                Sender s;
+                if(hisTerm > myTerm) {
+                    BOOST_LOG_TRIVIAL(info) << "Voting for: " << candidateId;
+                    s.sendVoteResponse(*ssp_, candidateId, 1); // He gets our vote
+                } else {
+                    BOOST_LOG_TRIVIAL(info) << "Not voting for: " << candidateId;
+                    s.sendVoteResponse(*ssp_, candidateId, 0);
+                }
+            }
+
             void startElections(const Timeout& t){
                 BOOST_LOG_TRIVIAL(info) << "Starting elections!";
+                // Increment my term
+                ssp_->setTerm(ssp_->getTerm() + 1);
                 Sender s;
                 s.sendRequestVote(*ssp_);
+                VoteCollector& vc = ssp_->getVoteCollector();
+                vc.clearVotes();
+                vc.storeVote(ssp_->getMyId()); // Vote for myself
             }
+
             void takeLeadership(const GotVoteResponse& vr){
-                BOOST_LOG_TRIVIAL(info) << "Taking leadership?";
+                BOOST_LOG_TRIVIAL(info) << "Taking Leadership";
             }
+
             // Guard conditions
             bool gotEnoughVotes(const GotVoteResponse& vr){
-               BOOST_LOG_TRIVIAL(info) << "Enough votes";
-               return false; 
+               BOOST_LOG_TRIVIAL(info) << "Enough votes?";
+               VoteCollector& vc = ssp_->getVoteCollector();
+               int vote = vr.vr_.getVoteGranted();
+                if( vote == 1){
+                    vc.storeVote(vr.vr_.getNodeId());
+                    BOOST_LOG_TRIVIAL(info) << "Got a vote";
+                }
+               return vc.isElected(); 
             }
+
+            bool isHisTermHigher(const GotRequestVote& evt){
+                int myTerm = ssp_->getTerm();
+                int hisTerm = evt.rv_.getTerm();
+                if (hisTerm > myTerm){
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
             typedef SetRandomTimeout initial_state;
+
+            // States of the submachine
             struct transition_table : mpl::vector<
                 //     Start,               Event,           Next,                Action,                 Guard
                 a_row <SetRandomTimeout,    Timeout,         WaitForVoteResponse, &cd::startElections>,
+                  row <SetRandomTimeout,    GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>,
                  _row <WaitForVoteResponse, Timeout,         SetRandomTimeout>,
-                  row <WaitForVoteResponse, GotVoteResponse, ExitCandidate,       &cd::takeLeadership,  &cd::gotEnoughVotes >
+                  row <WaitForVoteResponse, GotVoteResponse, ExitToLeader,        &cd::takeLeadership,    &cd::gotEnoughVotes >
             > {};
 
-            // Local data
+            // Replaces the default no-transition response.
+            template <class FSM,class Event>
+            void no_transition(Event const& e, FSM& fsm, int state)
+            {
+                BOOST_LOG_TRIVIAL(error) << "No transition from state " << state
+                    << " on event " << typeid(e).name();
+            }
+
+            // Local data for submachine Candidate
             ServerState* ssp_;
-        };
+            RaftProtocol_ *fsmp_;
+        }; // end of struct Candidate_
+
         typedef msm::back::state_machine<Candidate_> Candidate;
         
+        // States of the FSM
+        struct Follower : public msm::front::state<> 
+        {
+            template<class Event, class FSM>
+            void on_entry(Event const& evt, FSM& fsm){
+                BOOST_LOG_TRIVIAL(info) << "Entering the Follower state";
+                fsm.timeout_ = Config::readPeriod;
+            }
+            template<class Event, class FSM>
+            void on_exit(Event const& timeout, FSM& fsm){
+                BOOST_LOG_TRIVIAL(info) << "Exiting Follower";
+            }            
+        };
+
         struct Leader : public msm::front::state<> {
             template<class Event, class FSM>
             void on_entry(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Entering Leader";
+                fsm.timeout_ = Config::leaderPeriod;
+            }
+            template<class Event, class FSM>
+            void on_exit(Event const& evt, FSM& fsm){
+                BOOST_LOG_TRIVIAL(info) << "Exiting Leader";
                 fsm.timeout_ = Config::readPeriod;
             }
-
         };
 
         typedef Follower initial_state;
-
+        // Action
         void giveUpLeadership(const GotAppendEntries& evt){
             // Safe to lose this message if I'm not the leader 
             BOOST_LOG_TRIVIAL(info) << "Somebody send me AppendEntries - but I'm the leader";
+        }
+
+        void sendHeartbeat(const Timeout& evt){
+            Sender s;
+            s.sendAppendEntries(ss_);
+        }
+        void processAppendentries(const GotAppendEntries& evt){
+            BOOST_LOG_TRIVIAL(info) << "AppendEntries: " << evt.ae_.to_string();
+        }
+
+        void sendMyVote(const GotRequestVote& evt){
+            int myTerm = ss_.getTerm();
+            int hisTerm = evt.rv_.getTerm();
+            int candidateId = evt.rv_.getCandidateId();
+            Sender s;
+            if(hisTerm > myTerm) {
+                BOOST_LOG_TRIVIAL(info) << "Voting for: " << candidateId;
+                s.sendVoteResponse(ss_, candidateId, 1); // He gets our vote
+            } else {
+                BOOST_LOG_TRIVIAL(info) << "Not voting for: " << candidateId;
+                s.sendVoteResponse(ss_, candidateId, 0);
+            }
         }
 
         void setMyTerm(const HeardServerWithHigherTerm&) {}
@@ -165,23 +271,43 @@ namespace raft_fsm {
             }
         }
 
+        bool isHisTermHigher(const GotRequestVote& evt){
+            int myTerm = ss_.getTerm();
+            int hisTerm = evt.rv_.getTerm();
+            if (hisTerm > myTerm){
+                BOOST_LOG_TRIVIAL(info) << "Lost leadership!";
+                return true;
+            } else {
+                BOOST_LOG_TRIVIAL(info) << "I'm still the leader";
+                return false;
+            }
+        }
+
         bool votedForMe(const GotVoteResponse& evt) { return true;}
 
-        // Transition Table for protocol
+        // Transition Table for protocol main state machine
         // DO NOT RENAME THIS VARIABLE !!!
         struct transition_table : mpl::vector<
-            //     Start,     Event,            Next,      Action,                         Guard
-             _row <Follower,  Timeout,          Candidate>,
-             _row <Candidate, Timeout,          Leader>,
-              row <Leader,    GotAppendEntries, Follower,  &rp::giveUpLeadership,  &rp::isHisTermHigher >
+            //     Start,                      Event,            Next,      Action,                 Guard
+             _row <Follower,                   Timeout,          Candidate >,
+            a_row <Follower,                   GotRequestVote,   Follower,  &rp::sendMyVote >,
+            a_row <Follower,                   GotAppendEntries, Follower,  &rp::processAppendentries >,
+             _row <Candidate,                  Timeout,          Leader >,
+              row <Leader,                     GotAppendEntries, Follower,  &rp::giveUpLeadership,  &rp::isHisTermHigher >,
+              row <Leader,                     GotRequestVote,   Follower,  &rp::sendMyVote,        &rp::isHisTermHigher >,
+            a_row <Leader,                     Timeout,          Leader,    &rp::sendHeartbeat >,
+             _row<Candidate::exit_pt
+                 <Candidate_::ExitToFollower>, GotRequestVote,          Follower>,
+             _row<Candidate::exit_pt
+                 <Candidate_::ExitToLeader>,   GotVoteResponse,          Leader>
         > {};
         
         // Replaces the default no-transition response.
         template <class FSM,class Event>
         void no_transition(Event const& e, FSM& fsm, int state)
         {
-            std::cout << "No transition from state " << state
-                << " on event " << typeid(e).name() << std::endl;
+            BOOST_LOG_TRIVIAL(error) << "No transition from state " << state
+                << " on event " << typeid(e).name();
         }
 
         inline int getTimeout() {return timeout_;}
@@ -193,8 +319,9 @@ namespace raft_fsm {
         ServerState& ss_;
     };
 
-    // Pick a backend
+    // Define the backend
     typedef msm::back::state_machine<RaftProtocol_> RaftProtocol;
+    
     // Declare the run() method for the FSM
     void run(Receiver& r, ServerState& ss);
 

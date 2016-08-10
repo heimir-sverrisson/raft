@@ -8,6 +8,7 @@ Raft::Raft(string configFile, int myId)
     r_(ss_.getHostList().getHostById(myId))
 {
   BOOST_LOG_TRIVIAL(info) << "Raft constructed";
+  srand(ss_.getMyId() * getpid());
 }
 
 using namespace raft_fsm;

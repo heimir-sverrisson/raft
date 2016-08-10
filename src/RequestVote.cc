@@ -56,7 +56,7 @@ RequestVote::addInt(Value& o, const char *key, int value){
 }
 
 std::string
-RequestVote::to_string(){
+RequestVote::to_string() const {
   std::string str;
   StringBuffer buffer;
   Writer<StringBuffer> writer(buffer);

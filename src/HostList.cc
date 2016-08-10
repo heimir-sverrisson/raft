@@ -28,7 +28,7 @@ HostList::HostList(string filename, int myId){
     }
     int hostIndex = stoi(rec[0]); // Will throw an exception on malformed data
     hostIndices.push_back(hostIndex);
-    HostEntry h(hostIndex, rec[1], rec[2]);
+    HostEntry h(hostIndex, rec[1], rec[2], rec[3]);
     BOOST_LOG_TRIVIAL(info) << h.to_string();
     hosts_.push_back(h);
   }
@@ -44,7 +44,7 @@ HostList::HostList(string filename, int myId){
 HostEntry 
 HostList::getHostById(int id){
   int theId = -1;
-  HostEntry he(0,"","");
+  HostEntry he(0, "", "", "");
   for(auto& h : hosts_){
     if(h.getNodeId() == id){
       theId = h.getNodeId();

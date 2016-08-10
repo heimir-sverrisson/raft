@@ -10,7 +10,6 @@ namespace raft_fsm {
         while(true){
             BOOST_LOG_TRIVIAL(info) << "Timeout is: " << rp.getTimeout();
             WakeupType ret = r.waitForMessage(rp.getTimeout());
-            BOOST_LOG_TRIVIAL(error) << "Return value is: " << ret;
             switch(ret){
                 case notRunning:
                     BOOST_LOG_TRIVIAL(error) << "Receiver is not running!";
@@ -38,6 +37,7 @@ namespace raft_fsm {
                             RequestVote rv;
                             rv.parse_json(m.json);
                             BOOST_LOG_TRIVIAL(info) << "Got RequestVote";
+                            rp.process_event(GotRequestVote(rv));
                         }
                         break;
                         case voteResponse:
@@ -45,6 +45,7 @@ namespace raft_fsm {
                             VoteResponse vr;
                             vr.parse_json(m.json);
                             BOOST_LOG_TRIVIAL(info) << "Got VoteResponse";
+                            rp.process_event(GotVoteResponse(vr));
                         }
                         break;
                         case client:

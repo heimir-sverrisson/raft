@@ -12,12 +12,12 @@ class RequestVote : public virtual RaftMessage {
     RequestVote(int term, int candidateId, int lastLogIndex, int lastLogTerm);
     void addEntry(rapidjson::Value& v);
     void parse_json(std::string json);
-    std::string to_string();
-    std::string get_entries();
-    inline int getTerm(){ return term_; };
-    inline int getCandidateId(){ return candidateId_; };
-    inline int getLastLogIndex(){ return lastLogIndex_; };
-    inline int getLastLogTerm(){ return lastLogTerm_; };
+    std::string to_string() const;
+    std::string get_entries() const;
+    inline int getTerm() const { return term_; };
+    inline int getCandidateId() const { return candidateId_; };
+    inline int getLastLogIndex() const { return lastLogIndex_; };
+    inline int getLastLogTerm() const { return lastLogTerm_; };
   private:
     void addInt(rapidjson::Value& o, const char *key, int value);
     rapidjson::Document d_;

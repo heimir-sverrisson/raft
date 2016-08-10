@@ -12,7 +12,7 @@ class Sender{
   public:
     void sendAppendEntries(ServerState& ss);
     void sendRequestVote(ServerState& ss);
-    void sendVoteResponse(ServerState& ss, int nodeId, int noteId);
+    void sendVoteResponse(ServerState& ss, int candidateId, int vote);
 };
 
 #endif

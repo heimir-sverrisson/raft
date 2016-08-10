@@ -26,7 +26,7 @@ VoteCollector::storeVote(int id){
 }
 
 bool
-VoteCollector::isElected(){
+VoteCollector::isElected() const {
   return (votes_.size() > ids_.size()/2) ? true : false;
 }
 

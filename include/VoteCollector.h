@@ -12,7 +12,7 @@ class VoteCollector{
   public:
     VoteCollector(HostList hl);
     void storeVote(int id);
-    bool isElected();
+    bool isElected() const;
     void clearVotes();
   private:
     int hostCount_;
