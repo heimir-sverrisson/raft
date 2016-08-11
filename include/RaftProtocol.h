@@ -268,10 +268,12 @@ namespace raft_fsm {
             int myTerm = ss_.getTerm();
             int hisTerm = evt.rv_.getTerm();
             int candidateId = evt.rv_.getCandidateId();
+            bool alreadyVoted = (hisTerm == ss_.getVoteTerm()) ? true : false;
             Sender s;
-            if(hisTerm > myTerm) {
+            if(hisTerm > myTerm && !alreadyVoted) {
                 BOOST_LOG_TRIVIAL(info) << "Voting for: " << candidateId;
                 s.sendVoteResponse(ss_, candidateId, 1); // He gets our vote
+                ss_.setVoteTerm(hisTerm); // Nobody else will get my vote for this term
             } else {
                 BOOST_LOG_TRIVIAL(info) << "Not voting for: " << candidateId;
                 s.sendVoteResponse(ss_, candidateId, 0);
