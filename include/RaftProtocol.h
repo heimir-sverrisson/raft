@@ -43,7 +43,9 @@ namespace raft_fsm {
         typedef RaftProtocol_ rp; // Shorthand for table
 
         RaftProtocol_(Receiver& r, ServerState& ss) : 
-            timeout_(Config::readPeriod), r_(r), ss_(ss){};
+            r_(r), ss_(ss), timeout_(Config::readPeriod), 
+            until_(std::chrono::system_clock::now() - std::chrono::milliseconds(3))
+        {};
       
         template<class Event, class FSM>
         void on_entry(Event const& evt, FSM& fsm){
@@ -71,7 +73,8 @@ namespace raft_fsm {
       
             template<class Event, class FSM>
             void on_exit(Event const& evt, FSM& fsm){
-                fsm.timeout_ = Config::readPeriod;
+                fsm.resetTimeout();
+                fsm.setTimeout(Config::readPeriod);
                 BOOST_LOG_TRIVIAL(info) << "Exiting Candidate";
             }
             // Substates
@@ -83,10 +86,11 @@ namespace raft_fsm {
                     // Set the timeout to a random value
                     int tMin = Config::readPeriod/2;
                     int t = tMin + rand() % tMin;
-                    (fsm.fsmp_)->timeout_ = t;
+                    (fsm.fsmp_)->setTimeout(t);
                 }
                 template <class Event,class Fsm>
-                void on_exit(Event const&, Fsm&) const {
+                void on_exit(Event const&, Fsm& fsm) const {
+                    (fsm.fsmp_)->resetTimeout();
                     BOOST_LOG_TRIVIAL(info) << "Exiting SetRandomTimeout";
                 }
             };
@@ -97,7 +101,8 @@ namespace raft_fsm {
                     BOOST_LOG_TRIVIAL(info) << "Entering WaitForVoteResponse";
                 }
                 template <class Event,class Fsm>
-                void on_exit(Event const&, Fsm&) const {
+                void on_exit(Event const&, Fsm& fsm) const {
+                    (fsm.fsmp_)->resetTimeout();
                     BOOST_LOG_TRIVIAL(info) << "Exiting WaitForVoteResponse";
                 }
             };
@@ -109,7 +114,8 @@ namespace raft_fsm {
                     BOOST_LOG_TRIVIAL(info) << "Entering ExitToFollower";
                 }
                 template <class Event,class Fsm>
-                void on_exit(Event const&, Fsm&) const {
+                void on_exit(Event const&, Fsm& fsm) const {
+                    (fsm.fsmp_)->resetTimeout();
                     BOOST_LOG_TRIVIAL(info) << "Exiting ExitToFollower";
                 }
             };
@@ -120,7 +126,8 @@ namespace raft_fsm {
                     BOOST_LOG_TRIVIAL(info) << "Entering ExitToLeader";
                 }
                 template <class Event,class Fsm>
-                void on_exit(Event const&, Fsm&) const {
+                void on_exit(Event const&, Fsm& fsm) const {
+                    (fsm.fsmp_)->resetTimeout();
                     BOOST_LOG_TRIVIAL(info) << "Exiting ExitToLeader";
                 }
             };
@@ -207,10 +214,11 @@ namespace raft_fsm {
             template<class Event, class FSM>
             void on_entry(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Entering the Follower state";
-                fsm.timeout_ = Config::readPeriod;
+                fsm.setTimeout(Config::readPeriod);
             }
             template<class Event, class FSM>
             void on_exit(Event const& timeout, FSM& fsm){
+                fsm.resetTimeout();
                 BOOST_LOG_TRIVIAL(info) << "Exiting Follower";
             }            
         };
@@ -219,16 +227,18 @@ namespace raft_fsm {
             template<class Event, class FSM>
             void on_entry(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Entering Leader";
-                fsm.timeout_ = Config::leaderPeriod;
+                fsm.setTimeout(Config::leaderPeriod);
             }
             template<class Event, class FSM>
             void on_exit(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Exiting Leader";
-                fsm.timeout_ = Config::readPeriod;
+                fsm.resetTimeout();
+                fsm.setTimeout(Config::readPeriod);
             }
         };
 
         typedef Follower initial_state;
+
         // Action
         void giveUpLeadership(const GotAppendEntries& evt){
             // Safe to lose this message if I'm not the leader 
@@ -305,7 +315,7 @@ namespace raft_fsm {
             }
         }
 
-        bool votedForMe(const GotVoteResponse& evt) { return true;}
+        // bool votedForMe(const GotVoteResponse& evt) { return true;}
 
         // Transition Table for protocol main state machine
         // DO NOT RENAME THIS VARIABLE !!!
@@ -334,12 +344,29 @@ namespace raft_fsm {
         }
 
         inline int getTimeout() {return timeout_;}
-        inline void setTimeout(int timeout) {timeout_ = timeout;}
+        inline void setTimeout(int timeout) {
+            // std::chrono::time_point<std::chrono::system_clock>
+            auto now = std::chrono::system_clock::now();
+            if(now < until_){
+                 std::chrono::duration<double> secDiff = until_ - now;
+                 timeout_ = std::chrono::duration_cast<std::chrono::milliseconds>(secDiff).count();
+            } else {
+                until_ = now + std::chrono::milliseconds(timeout);
+                timeout_ = timeout;
+            }
+        }
+
+        inline void resetTimeout() {
+            // necassary when exiting states
+            until_ = std::chrono::system_clock::now() - std::chrono::milliseconds(3);
+        }
         
         // State variables
-        int timeout_;
         Receiver& r_;
         ServerState& ss_;
+    private:
+        int timeout_;
+        std::chrono::time_point<std::chrono::system_clock> until_;
     };
 
     // Define the backend
