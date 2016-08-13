@@ -227,6 +227,7 @@ namespace raft_fsm {
             template<class Event, class FSM>
             void on_entry(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Entering Leader";
+                fsm.resetTimeout();
                 fsm.setTimeout(Config::leaderPeriod);
             }
             template<class Event, class FSM>
