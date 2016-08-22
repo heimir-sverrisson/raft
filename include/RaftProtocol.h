@@ -73,7 +73,6 @@ namespace raft_fsm {
       
             template<class Event, class FSM>
             void on_exit(Event const& evt, FSM& fsm){
-                fsm.resetTimeout();
                 fsm.setTimeout(Config::readPeriod);
                 BOOST_LOG_TRIVIAL(info) << "Exiting Candidate";
             }
@@ -90,7 +89,6 @@ namespace raft_fsm {
                 }
                 template <class Event,class Fsm>
                 void on_exit(Event const&, Fsm& fsm) const {
-                    (fsm.fsmp_)->resetTimeout();
                     BOOST_LOG_TRIVIAL(info) << "Exiting SetRandomTimeout";
                 }
             };
@@ -102,7 +100,6 @@ namespace raft_fsm {
                 }
                 template <class Event,class Fsm>
                 void on_exit(Event const&, Fsm& fsm) const {
-                    (fsm.fsmp_)->resetTimeout();
                     BOOST_LOG_TRIVIAL(info) << "Exiting WaitForVoteResponse";
                 }
             };
@@ -218,7 +215,6 @@ namespace raft_fsm {
             }
             template<class Event, class FSM>
             void on_exit(Event const& timeout, FSM& fsm){
-                fsm.resetTimeout();
                 BOOST_LOG_TRIVIAL(info) << "Exiting Follower";
             }            
         };
@@ -227,13 +223,11 @@ namespace raft_fsm {
             template<class Event, class FSM>
             void on_entry(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Entering Leader";
-                fsm.resetTimeout();
                 fsm.setTimeout(Config::leaderPeriod);
             }
             template<class Event, class FSM>
             void on_exit(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Exiting Leader";
-                fsm.resetTimeout();
                 fsm.setTimeout(Config::readPeriod);
             }
         };
@@ -242,7 +236,8 @@ namespace raft_fsm {
 
         // Action
         void giveUpLeadership(const GotAppendEntries& evt){
-            // Safe to lose this message if I'm not the leader 
+            // Safe to lose this message if I'm not the leader
+            resetTimeout();
             BOOST_LOG_TRIVIAL(error) << "Somebody send me AppendEntries - but I thought I was the leader";
         }
         void stopElections(const GotAppendEntries& evt){
