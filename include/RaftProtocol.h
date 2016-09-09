@@ -73,7 +73,6 @@ namespace raft_fsm {
       
             template<class Event, class FSM>
             void on_exit(Event const& evt, FSM& fsm){
-                fsm.setTimeout(Config::readPeriod);
                 BOOST_LOG_TRIVIAL(info) << "Exiting Candidate";
             }
             // Substates
@@ -175,6 +174,10 @@ namespace raft_fsm {
                 if (hisTerm > myTerm){
                     return true;
                 } else {
+                    Sender s;
+                    int candidateId = evt.rv_.getCandidateId();
+                    BOOST_LOG_TRIVIAL(info) << "Not voting for: " << candidateId;
+                    s.sendVoteResponse(*ssp_, candidateId, 0);
                     return false;
                 }
             }
@@ -187,6 +190,7 @@ namespace raft_fsm {
                 a_row <SetRandomTimeout,    Timeout,         WaitForVoteResponse, &cd::startElections>,
                   row <SetRandomTimeout,    GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>,
                  _row <WaitForVoteResponse, Timeout,         SetRandomTimeout>,
+                  row <WaitForVoteResponse, GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>,
                   row <WaitForVoteResponse, GotVoteResponse, ExitToLeader,        &cd::takeLeadership,    &cd::gotEnoughVotes >
             > {};
 
@@ -246,11 +250,13 @@ namespace raft_fsm {
         }
 
         void sendHeartbeat(const Timeout& evt){
+            resetTimeout();
             Sender s;
             s.sendAppendEntries(ss_);
         }
 
         void processAppendEntries(const GotAppendEntries& evt){
+            resetTimeout();
             BOOST_LOG_TRIVIAL(info) << "AppendEntries: " << evt.ae_.to_string();
             int myLeader = evt.ae_.getLeaderId();
             int hisTerm = evt.ae_.getTerm();
