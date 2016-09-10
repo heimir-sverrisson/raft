@@ -310,7 +310,7 @@ namespace raft_fsm {
             } else if (hisTerm == voteTerm){
                 return (candidateId == ss_.getVoteCandidateId()) ? true : false;
             }
-            return true;
+            return false;
         }
 
         // Guard conditions
