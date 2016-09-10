@@ -245,11 +245,17 @@ namespace raft_fsm {
         void giveUpLeadership(const GotAppendEntries& evt){
             // Safe to lose this message if I'm not the leader
             resetTimeout();
+            int hisTerm = evt.ae_.getTerm();
+            ss_.setTerm(hisTerm);
+            ss_.setVoteTerm(hisTerm);
             BOOST_LOG_TRIVIAL(error) << "Somebody send me AppendEntries - but I thought I was the leader";
         }
         void stopElections(const GotAppendEntries& evt){
             // Safe to lose this message if we are in the middle of elections
             resetTimeout();
+            int hisTerm = evt.ae_.getTerm();
+            ss_.setTerm(hisTerm);
+            ss_.setVoteTerm(hisTerm);
             BOOST_LOG_TRIVIAL(error) << "Somebody sent me AppendEntries - aborting elections";
         }
 
@@ -311,8 +317,6 @@ namespace raft_fsm {
             int myTerm = ss_.getTerm();
             int hisTerm = evt.ae_.getTerm();
             if (hisTerm > myTerm){
-                ss_.setTerm(hisTerm);
-                ss_.setVoteTerm(hisTerm);
                 BOOST_LOG_TRIVIAL(info) << "Lost leadership!";
                 return true;
             } else {
