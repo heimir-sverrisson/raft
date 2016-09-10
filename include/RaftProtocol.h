@@ -147,7 +147,9 @@ namespace raft_fsm {
             void startElections(const Timeout& t){
                 BOOST_LOG_TRIVIAL(info) << "Starting elections!";
                 // Increment my term
-                ssp_->setTerm(ssp_->getTerm() + 1);
+                int myNewTerm = ssp_->getTerm() + 1;
+                ssp_->setTerm(myNewTerm);
+                ssp_->setVoteTerm(myNewTerm);
                 Sender s;
                 s.sendRequestVote(*ssp_);
                 VoteCollector& vc = ssp_->getVoteCollector();
@@ -278,29 +280,26 @@ namespace raft_fsm {
         }
 
         void sendMyVote(const GotRequestVote& evt){
-            int myTerm = ss_.getTerm();
             int hisTerm = evt.rv_.getTerm();
             int candidateId = evt.rv_.getCandidateId();
-            bool already = alreadyVoted(hisTerm, candidateId);
             Sender s;
-            if(hisTerm > myTerm && !already) {
+            if(shouldVote(hisTerm, candidateId)) {
                 BOOST_LOG_TRIVIAL(info) << "Voting for: " << candidateId;
                 s.sendVoteResponse(ss_, candidateId, 1); // He gets our vote
-                ss_.setVoteTerm(hisTerm); // Nobody else will get my vote for this term
             } else {
                 BOOST_LOG_TRIVIAL(info) << "Not voting for: " << candidateId;
                 s.sendVoteResponse(ss_, candidateId, 0);
             }
         }
 
-        bool alreadyVoted(int hisTerm, int candidateId){
+        bool shouldVote(int hisTerm, int candidateId){
             int voteTerm = ss_.getVoteTerm();
             if(hisTerm > voteTerm){
                 ss_.setVoteTerm(hisTerm);
                 ss_.setVoteCandidateId(candidateId);
-                return false;
+                return true;
             } else if (hisTerm == voteTerm){
-                return (candidateId == ss_.getVoteCandidateId()) ? false : true;
+                return (candidateId == ss_.getVoteCandidateId()) ? true : false;
             }
             return true;
         }
