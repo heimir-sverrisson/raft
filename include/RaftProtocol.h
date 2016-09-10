@@ -249,6 +249,7 @@ namespace raft_fsm {
             ss_.setTerm(hisTerm);
             ss_.setVoteTerm(hisTerm);
             BOOST_LOG_TRIVIAL(error) << "Somebody send me AppendEntries - but I thought I was the leader";
+            BOOST_LOG_TRIVIAL(info) << "AppendEntries: " << evt.ae_.to_string();
         }
         void stopElections(const GotAppendEntries& evt){
             // Safe to lose this message if we are in the middle of elections
