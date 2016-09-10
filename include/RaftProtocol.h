@@ -191,9 +191,9 @@ namespace raft_fsm {
             struct transition_table : mpl::vector<
                 //     Start,               Event,           Next,                Action,                 Guard
                 a_row <SetRandomTimeout,    Timeout,         WaitForVoteResponse, &cd::startElections>,
-                  row <SetRandomTimeout,    GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>,
+                row <SetRandomTimeout,    GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>,
                  _row <WaitForVoteResponse, Timeout,         SetRandomTimeout>,
-                  row <WaitForVoteResponse, GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>,
+                row <WaitForVoteResponse, GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>,
                   row <WaitForVoteResponse, GotVoteResponse, ExitToLeader,        &cd::takeLeadership,    &cd::gotEnoughVotes >
             > {};
 
@@ -338,6 +338,18 @@ namespace raft_fsm {
             }
         }
 
+        bool isHisTermHigherOrSame(const GotRequestVote& evt){
+            int myTerm = ss_.getTerm();
+            int hisTerm = evt.rv_.getTerm();
+            if (hisTerm >= myTerm){
+                BOOST_LOG_TRIVIAL(info) << "Terminating my candidacy";
+                return true;
+            } else {
+                BOOST_LOG_TRIVIAL(info) << "I'm still a candidate";
+                return false;
+            }
+        }
+
         bool isHisTermHigher(const GotRequestVote& evt){
             int myTerm = ss_.getTerm();
             int hisTerm = evt.rv_.getTerm();
@@ -360,6 +372,7 @@ namespace raft_fsm {
             a_row <Follower,                   GotRequestVote,    Follower,  &rp::sendMyVote >,
             a_row <Follower,                   GotAppendEntries,  Follower,  &rp::processAppendEntries >,
               row <Candidate,                  GotAppendEntries,  Follower,  &rp::stopElections,     &rp::isHisTermHigherOrSame >,
+              row <Candidate,                  GotRequestVote,    Follower,  &rp::sendMyVote,        &rp::isHisTermHigherOrSame >,
               row <Leader,                     GotAppendEntries,  Follower,  &rp::giveUpLeadership,  &rp::isHisTermHigher >,
               row <Leader,                     GotRequestVote,    Follower,  &rp::sendMyVote,        &rp::isHisTermHigher >,
             a_row <Leader,                     Timeout,           Leader,    &rp::sendHeartbeat >,
