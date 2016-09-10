@@ -326,6 +326,18 @@ namespace raft_fsm {
             }
         }
 
+        bool isHisTermHigherOrSame(const GotAppendEntries& evt){
+            int myTerm = ss_.getTerm();
+            int hisTerm = evt.ae_.getTerm();
+            if (hisTerm >= myTerm){
+                BOOST_LOG_TRIVIAL(info) << "Terminating my candidacy";
+                return true;
+            } else {
+                BOOST_LOG_TRIVIAL(info) << "I'm still a candidate";
+                return false;
+            }
+        }
+
         bool isHisTermHigher(const GotRequestVote& evt){
             int myTerm = ss_.getTerm();
             int hisTerm = evt.rv_.getTerm();
@@ -347,7 +359,7 @@ namespace raft_fsm {
              _row <Follower,                   Timeout,           Candidate >,
             a_row <Follower,                   GotRequestVote,    Follower,  &rp::sendMyVote >,
             a_row <Follower,                   GotAppendEntries,  Follower,  &rp::processAppendEntries >,
-              row <Candidate,                  GotAppendEntries,  Follower,  &rp::stopElections,     &rp::isHisTermHigher >,
+              row <Candidate,                  GotAppendEntries,  Follower,  &rp::stopElections,     &rp::isHisTermHigherOrSame >,
               row <Leader,                     GotAppendEntries,  Follower,  &rp::giveUpLeadership,  &rp::isHisTermHigher >,
               row <Leader,                     GotRequestVote,    Follower,  &rp::sendMyVote,        &rp::isHisTermHigher >,
             a_row <Leader,                     Timeout,           Leader,    &rp::sendHeartbeat >,
