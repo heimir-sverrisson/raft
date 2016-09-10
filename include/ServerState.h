@@ -26,6 +26,7 @@ class ServerState {
     inline int getLastLogIndex() const { return lastLogIndex_; };
     inline int getLastLogTerm() const { return lastLogTerm_; };
     inline int getVoteTerm() const { return voteTerm_; };
+    inline int getVoteCandidateId() const { return voteCandidateId_; };
     inline VoteCollector& getVoteCollector() { return voteCollector_; };
     inline void setNodeState(NodeState nodeState) { nodeState_ = nodeState; };
     inline void setCandidateState(CandidateState candidateState) { candidateState_ = candidateState; };
@@ -33,6 +34,7 @@ class ServerState {
     inline void setLastLogIndex(int lastLogIndex) { lastLogIndex_ = lastLogIndex; };
     inline void setLastLogTerm(int lastLogTerm) { lastLogTerm_ = lastLogTerm; };
     inline void setVoteTerm(int voteTerm) { voteTerm_ = voteTerm; };
+    inline void setVoteCandidateId(int voteCandidateId) { voteCandidateId_ = voteCandidateId; };
   private:
     HostList hostList_;
     NodeState nodeState_;
@@ -42,6 +44,7 @@ class ServerState {
     int lastLogIndex_;
     int lastLogTerm_;
     int voteTerm_;
+    int voteCandidateId_;
     VoteCollector voteCollector_;
 };
 
@@ -53,6 +56,7 @@ inline ServerState::ServerState(HostList hostList, int myId)
     lastLogIndex_(0),
     lastLogTerm_(0),
     voteTerm_(0),
+    voteCandidateId_(0),
     voteCollector_(hostList) 
 {}
 

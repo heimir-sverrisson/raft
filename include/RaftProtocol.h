@@ -44,7 +44,8 @@ namespace raft_fsm {
 
         RaftProtocol_(Receiver& r, ServerState& ss) : 
             r_(r), ss_(ss), timeout_(Config::readPeriod), 
-            until_(std::chrono::system_clock::now() - std::chrono::milliseconds(3))
+            until_(std::chrono::system_clock::now() - std::chrono::milliseconds(3)),
+            voteTerm_(0), voteCandidate_(0)
         {};
       
         template<class Event, class FSM>
@@ -280,9 +281,9 @@ namespace raft_fsm {
             int myTerm = ss_.getTerm();
             int hisTerm = evt.rv_.getTerm();
             int candidateId = evt.rv_.getCandidateId();
-            bool alreadyVoted = (hisTerm == ss_.getVoteTerm()) ? true : false;
+            bool already = alreadyVoted(hisTerm, candidateId);
             Sender s;
-            if(hisTerm > myTerm && !alreadyVoted) {
+            if(hisTerm > myTerm && !already) {
                 BOOST_LOG_TRIVIAL(info) << "Voting for: " << candidateId;
                 s.sendVoteResponse(ss_, candidateId, 1); // He gets our vote
                 ss_.setVoteTerm(hisTerm); // Nobody else will get my vote for this term
@@ -290,6 +291,18 @@ namespace raft_fsm {
                 BOOST_LOG_TRIVIAL(info) << "Not voting for: " << candidateId;
                 s.sendVoteResponse(ss_, candidateId, 0);
             }
+        }
+
+        bool alreadyVoted(int hisTerm, int candidateId){
+            int voteTerm = ss_.getVoteTerm();
+            if(hisTerm > voteTerm){
+                ss_.setVoteTerm(hisTerm);
+                ss_.setVoteCandidateId(candidateId);
+                return false;
+            } else if (hisTerm == voteTerm){
+                return (candidateId == ss_.getVoteCandidateId()) ? false : true;
+            }
+            return true;
         }
 
         // Guard conditions
@@ -369,6 +382,8 @@ namespace raft_fsm {
     private:
         int timeout_;
         std::chrono::time_point<std::chrono::system_clock> until_;
+        int voteTerm_;
+        int voteCandidate_;
     };
 
     // Define the backend
