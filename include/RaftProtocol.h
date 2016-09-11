@@ -392,10 +392,10 @@ namespace raft_fsm {
         }
 
         inline int getTimeout() {return timeout_;}
-        
+
         inline void setTimeout(int timeout) {
             using namespace std::chrono;
-            long now_ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+            long now_ms = duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
             if(now_ms < until_){
                  timeout_ = until_ - now_ms;
             } else {
@@ -407,7 +407,7 @@ namespace raft_fsm {
         inline void resetTimeout() {
             // necassary when exiting states
             using namespace std::chrono;
-            until_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - 3;
+            until_ = duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count() - 3;
         }
         
         // State variables
