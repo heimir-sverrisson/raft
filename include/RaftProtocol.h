@@ -116,6 +116,7 @@ namespace raft_fsm {
                     BOOST_LOG_TRIVIAL(info) << "Exiting ExitToFollower";
                 }
             };
+
             // Pseudo exit state to Leader
             struct ExitToLeader : public msm::front::exit_pseudo_state<GotVoteResponse>{
                 template <class Event,class Fsm>
@@ -136,10 +137,10 @@ namespace raft_fsm {
                 int candidateId = evt.rv_.getCandidateId();
                 Sender s;
                 if(hisTerm > myTerm) {
-                    BOOST_LOG_TRIVIAL(info) << "Voting for: " << candidateId;
+                    BOOST_LOG_TRIVIAL(info) << "Voting as candidate for: " << candidateId;
                     s.sendVoteResponse(*ssp_, candidateId, 1); // He gets our vote
                 } else {
-                    BOOST_LOG_TRIVIAL(info) << "Not voting for: " << candidateId;
+                    BOOST_LOG_TRIVIAL(info) << "Not voting as candidate for: " << candidateId;
                     s.sendVoteResponse(*ssp_, candidateId, 0);
                 }
             }
@@ -191,9 +192,9 @@ namespace raft_fsm {
             struct transition_table : mpl::vector<
                 //     Start,               Event,           Next,                Action,                 Guard
                 a_row <SetRandomTimeout,    Timeout,         WaitForVoteResponse, &cd::startElections>,
-                row <SetRandomTimeout,    GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>,
+                  row <SetRandomTimeout,    GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>, 
                  _row <WaitForVoteResponse, Timeout,         SetRandomTimeout>,
-                row <WaitForVoteResponse, GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>,
+                  row <WaitForVoteResponse, GotRequestVote,  ExitToFollower,      &cd::sendMyVote,        &cd::isHisTermHigher>, 
                   row <WaitForVoteResponse, GotVoteResponse, ExitToLeader,        &cd::takeLeadership,    &cd::gotEnoughVotes >
             > {};
 
@@ -378,9 +379,9 @@ namespace raft_fsm {
             a_row <Leader,                     Timeout,           Leader,    &rp::sendHeartbeat >,
             a_row <Leader,                     GotAppendResponse, Leader,    &rp::processAppendResponse >,
              _row<Candidate::exit_pt
-                 <Candidate_::ExitToFollower>, GotRequestVote,          Follower>,
+                 <Candidate_::ExitToFollower>, GotRequestVote,    Follower>,
              _row<Candidate::exit_pt
-                 <Candidate_::ExitToLeader>,   GotVoteResponse,          Leader>
+                 <Candidate_::ExitToLeader>,   GotVoteResponse,   Leader>
         > {};
         
         // Replaces the default no-transition response.
