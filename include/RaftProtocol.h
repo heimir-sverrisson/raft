@@ -44,7 +44,7 @@ namespace raft_fsm {
 
         RaftProtocol_(Receiver& r, ServerState& ss) : 
             r_(r), ss_(ss), timeout_(Config::readPeriod), 
-            until_(std::chrono::system_clock::now() - std::chrono::milliseconds(3)),
+            until_(0), //until_(std::chrono::system_clock::now() - std::chrono::milliseconds(3)),
             voteTerm_(0), voteCandidate_(0)
         {};
       
@@ -236,7 +236,6 @@ namespace raft_fsm {
             template<class Event, class FSM>
             void on_exit(Event const& evt, FSM& fsm){
                 BOOST_LOG_TRIVIAL(info) << "Exiting Leader";
-                fsm.setTimeout(Config::readPeriod);
             }
         };
 
@@ -393,21 +392,22 @@ namespace raft_fsm {
         }
 
         inline int getTimeout() {return timeout_;}
+        
         inline void setTimeout(int timeout) {
-            // std::chrono::time_point<std::chrono::system_clock>
-            auto now = std::chrono::system_clock::now();
-            if(now < until_){
-                 std::chrono::duration<double> secDiff = until_ - now;
-                 timeout_ = std::chrono::duration_cast<std::chrono::milliseconds>(secDiff).count();
+            using namespace std::chrono;
+            long now_ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+            if(now_ms < until_){
+                 timeout_ = until_ - now_ms;
             } else {
-                until_ = now + std::chrono::milliseconds(timeout);
+                until_ = now_ms + timeout;
                 timeout_ = timeout;
             }
         }
 
         inline void resetTimeout() {
             // necassary when exiting states
-            until_ = std::chrono::system_clock::now() - std::chrono::milliseconds(3);
+            using namespace std::chrono;
+            until_ = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - 3;
         }
         
         // State variables
@@ -415,7 +415,7 @@ namespace raft_fsm {
         ServerState& ss_;
     private:
         int timeout_;
-        std::chrono::time_point<std::chrono::system_clock> until_;
+        long until_;
         int voteTerm_;
         int voteCandidate_;
     };
