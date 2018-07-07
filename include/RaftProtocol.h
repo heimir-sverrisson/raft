@@ -44,7 +44,7 @@ namespace raft_fsm {
 
         RaftProtocol_(Receiver& r, ServerState& ss) : 
             r_(r), ss_(ss), timeout_(Config::readPeriod), 
-            until_(0), //until_(std::chrono::system_clock::now() - std::chrono::milliseconds(3)),
+            until_(0),
             voteTerm_(0), voteCandidate_(0)
         {};
       
