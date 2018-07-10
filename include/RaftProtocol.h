@@ -436,7 +436,7 @@ struct RaftProtocol_ : public msm::front::state_machine_def<RaftProtocol_> {
 
    private:
     int timeout_;
-    long until_ = 0L;
+    long until_;
     int voteTerm_;
     int voteCandidate_;
 };
