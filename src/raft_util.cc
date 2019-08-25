@@ -16,12 +16,12 @@ namespace expr = boost::log::expressions;
 namespace attrs = boost::log::attributes;
 namespace keywords = boost::log::keywords;
 
-void log_file_init() {
+void log_init() {
     logging::register_simple_formatter_factory<
         boost::log::trivial::severity_level, char>("Severity");
     logging::add_file_log(
         keywords::file_name = "raft_%N.log",
-        keywords::rotation_size = 10 * 1024 * 1024,
+        keywords::rotation_size = 50 * 1024 * 1024,
         keywords::time_based_rotation =
             sinks::file::rotation_at_time_point(0, 0, 0),
         keywords::auto_flush = true,
@@ -34,7 +34,7 @@ void log_file_init() {
 
 typedef sinks::synchronous_sink<sinks::syslog_backend> sink_t;
 
-void log_init() {
+void log_syslog_init() {
     boost::shared_ptr<logging::core> core = logging::core::get();
 
     // Create a new backend
