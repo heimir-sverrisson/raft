@@ -14,13 +14,24 @@ UDPSocket::UDPSocket(string server_name, string service,
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
 
-    int rv =
-        getaddrinfo(server_name.c_str(), service.c_str(), &hints, &results_);
+    int rv = 0;
+    for (int i = 0; i < 3; i++) {
+        rv = getaddrinfo(server_name.c_str(), service.c_str(), &hints,
+                         &results_);
+        if (rv == 0) {
+            break;
+        } else {
+            BOOST_LOG_TRIVIAL(info) << "UDP get address info error: " << rv
+                                    << ", " << strerror(errno) << ". Retrying";
+        }
+        usleep(20000);  // Wait 20 msec for next try
+    }
     if (rv != 0) {
         BOOST_LOG_TRIVIAL(error) << "UDP get address info error: " << rv << ", "
                                  << strerror(errno);
         throw strerror(errno);
     }
+
     switch (socketType) {
         case SocketType::serverSocket:
             bind();
