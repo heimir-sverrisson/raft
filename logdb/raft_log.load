@@ -1,0 +1,17 @@
+load csv
+from stdin
+having fields
+(
+    node_id, log_time, severity, message
+)
+into postgresql:///raft?raft_log(
+    node_id,
+    log_time,
+    severity,
+    message
+)
+with 
+  drop indexes,
+  fields not enclosed,
+  fields terminated by '\t'
+;
